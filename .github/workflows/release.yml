@@ -47,7 +47,13 @@ jobs:
       - name: Icon and version details for printty.exe
         shell: bash
         # Windows file versions are numbers only: 0.2.0-rc.1 becomes 0.2.0.
-        run: bash tools/winres.sh "${VERSION%%-*}"
+        # Retried: it downloads go-winres, and the module proxy sometimes drops a connection.
+        run: |
+          for i in 1 2 3; do
+            bash tools/winres.sh "${VERSION%%-*}" && exit 0
+            echo "Retrying in 15 s"; sleep 15
+          done
+          exit 1
       - name: Build
         shell: bash
         run: |
