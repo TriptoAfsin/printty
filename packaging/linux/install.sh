@@ -17,7 +17,7 @@ systemctl enable --now printty
 sleep 2
 code=$(cat /var/lib/printty/setup-code.txt 2>/dev/null || true)
 echo
-echo "Printty is running: open http://$(hostname).local:8631 or http://localhost:8631"
+echo "Printty is running: open http://$(uname -n).local:8631 or http://localhost:8631"
 [ -n "$code" ] && echo "Setup code: $code"
 echo "Settings (Telegram): /etc/printty/printty.env, then: sudo systemctl restart printty"
 echo "Remove it: sudo systemctl disable --now printty && sudo rm /etc/systemd/system/printty.service /usr/local/bin/printty"

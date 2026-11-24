@@ -1,0 +1,12 @@
+#!/bin/sh
+# Printty AppImage. With arguments it runs printty with them (for example
+# "./Printty.AppImage -addr :8631"). Without, it starts Printty for this user
+# and opens it in the browser; it keeps running until this process ends.
+HERE="$(dirname "$(readlink -f "$0")")"
+if [ "$#" -gt 0 ]; then
+  exec "$HERE/usr/bin/printty" "$@"
+fi
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}/printty"
+mkdir -p "$DATA"
+( sleep 2; xdg-open "http://localhost:8631/admin" >/dev/null 2>&1 ) &
+exec "$HERE/usr/bin/printty" -data "$DATA"

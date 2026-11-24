@@ -1,0 +1,44 @@
+# .deb and .rpm packages for Printty, built by release.yml with nfpm:
+#   VERSION=0.2.1 ARCH=amd64 nfpm package -f packaging/linux/nfpm.yaml -p deb -t dist/
+# The binary for ARCH is staged at dist/pkg/printty first.
+name: printty
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: TriptoAfsin <noreply@github.com>
+description: |
+  Lean print server: share this computer's printer with phones on the local
+  network through a web page, with approvals and Telegram alerts. Prints
+  through CUPS.
+homepage: https://github.com/TriptoAfsin/printty
+license: Unspecified
+
+depends:
+  - cups-client
+recommends:
+  - cups
+  - poppler-utils # page previews in the print editor
+
+contents:
+  - src: dist/pkg/printty
+    dst: /usr/bin/printty
+    file_info:
+      mode: 0755
+  - src: dist/printty-pkg.service
+    dst: /usr/lib/systemd/system/printty.service
+    file_info:
+      mode: 0644
+  - src: printty.env.example
+    dst: /etc/printty/printty.env
+    type: config|noreplace
+    file_info:
+      mode: 0600
+  - src: README.md
+    dst: /usr/share/doc/printty/README.md
+
+scripts:
+  postinstall: packaging/linux/postinstall.sh
+  preremove: packaging/linux/preremove.sh
+  postremove: packaging/linux/postremove.sh

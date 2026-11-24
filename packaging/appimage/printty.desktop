@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Printty
+Comment=Share this computer's printer with phones on the network
+Exec=printty
+Icon=printty
+Categories=Utility;Network;
+Terminal=false
