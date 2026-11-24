@@ -78,25 +78,39 @@ func statusOf(name string) State {
 }
 
 // Install registers the service (automatic, delayed start, restart on failure)
-// and opens the port on Private networks. Needs administrator rights.
+// and opens the port on Private networks. Needs administrator rights. If the
+// service already exists (an upgrade, or a new folder) it is updated in place.
 func Install(exe string, args []string, port string) error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return fmt.Errorf("connect to Windows services: %w", err)
 	}
 	defer m.Disconnect()
-	if s, err := m.OpenService(Name); err == nil {
-		s.Close()
-		return fmt.Errorf("the Printty service is already installed")
-	}
-	s, err := m.CreateService(Name, exe, mgr.Config{
+	conf := mgr.Config{
 		DisplayName:      displayName,
 		Description:      description,
 		StartType:        mgr.StartAutomatic,
 		DelayedAutoStart: true,
-	}, args...)
-	if err != nil {
-		return fmt.Errorf("create service: %w", err)
+	}
+	s, err := m.OpenService(Name)
+	if err == nil {
+		old, cerr := s.Config()
+		if cerr != nil {
+			s.Close()
+			return fmt.Errorf("read service settings: %w", cerr)
+		}
+		conf.ServiceType, conf.ErrorControl = old.ServiceType, old.ErrorControl
+		conf.ServiceStartName = old.ServiceStartName
+		conf.BinaryPathName = Quote(append([]string{exe}, args...))
+		if err := s.UpdateConfig(conf); err != nil {
+			s.Close()
+			return fmt.Errorf("update service: %w", err)
+		}
+	} else {
+		s, err = m.CreateService(Name, exe, conf, args...)
+		if err != nil {
+			return fmt.Errorf("create service: %w", err)
+		}
 	}
 	defer s.Close()
 	s.SetRecoveryActions([]mgr.RecoveryAction{

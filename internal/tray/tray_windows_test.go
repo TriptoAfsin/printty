@@ -3,6 +3,7 @@
 package tray
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -10,7 +11,11 @@ import (
 	"github.com/TriptoAfsin/printty/internal/web"
 )
 
+// Opt-in: it replaces what's on the clipboard, and CI machines may have none.
 func TestCopyText(t *testing.T) {
+	if os.Getenv("PRINTTY_CLIPBOARD_TEST") != "1" {
+		t.Skip("set PRINTTY_CLIPBOARD_TEST=1 to run")
+	}
 	if err := CopyText("http://192.0.2.1:8631"); err != nil {
 		t.Fatal(err)
 	}

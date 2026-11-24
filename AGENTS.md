@@ -38,6 +38,9 @@ internal/tray/          Windows notification-area icon (Shell_NotifyIcon); `prin
 internal/notify/        Telegram (send + long-poll callbacks, webhook detection)
 internal/web/           embedded templates/ and static/ (CSS, JS, fonts, icons, manifest, service worker)
 docs/                   architecture notes, mock-up stylesheet
+packaging/              Windows installer (Inno Setup), Linux systemd unit + install.sh
+tools/                  mkicon (printty.ico), winres.sh (exe icon/version .syso)
+.github/workflows/      ci.yml (vet/test/cross-compile), release.yml (v* tag → installers, archives, release)
 ```
 
 ## Conventions
@@ -68,4 +71,4 @@ go run ./cmd/printty                 # run locally
 
 ## Current phase
 
-v0.1 works end to end on Windows (tested by printing to "Microsoft Print to PDF" with `PRINTTY_TEST_OUTPUT_DIR`). Service install, start-at-sign-in and the tray icon are done and tested. Next: a real-paper test on the Canon G1010 (including switching it off mid-job), a "printer is back" alert, mDNS + QR code. Secrets live in `printty.env` (gitignored): never print, log or commit them. Testing prints to a virtual printer can move the Windows default printer: check and restore it afterwards.
+v0.1 works end to end on Windows (tested by printing to "Microsoft Print to PDF" with `PRINTTY_TEST_OUTPUT_DIR`). Service install, start-at-sign-in, the tray icon and the release pipeline are done. Releases: add a CHANGELOG.md section, push a `v*` tag. Line endings are LF (.gitattributes); keep `gofmt -l .` empty, CI checks it. Next: a real-paper test on the Canon G1010 (including switching it off mid-job), a "printer is back" alert, mDNS + QR code. Secrets live in `printty.env` (gitignored): never print, log or commit them. Testing prints to a virtual printer can move the Windows default printer: check and restore it afterwards.

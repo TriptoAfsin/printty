@@ -173,3 +173,54 @@ func trayCmd(args []string) int {
 	<-t.Done()
 	return 0
 }
+
+// waitListening waits until something accepts connections on addr.
+func waitListening(addr string, max time.Duration) bool {
+	_, port, _ := net.SplitHostPort(addr)
+	end := time.Now().Add(max)
+	for {
+		if c, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", port), time.Second); err == nil {
+			c.Close()
+			return true
+		}
+		if time.Now().After(end) {
+			return false
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+}
+
+// openCmd is "printty open", the Start menu shortcut: it starts the service if
+// it's stopped, makes sure the tray icon is there, and opens the admin page.
+func openCmd(args []string) int {
+	fs := flag.NewFlagSet("open", flag.ExitOnError)
+	addr := fs.String("addr", "", "listen address")
+	fs.Parse(args)
+	service.HideConsole()
+	os.Chdir(service.ExeDir())
+	cfg := loadConfig(*addr, "")
+	st := service.Status()
+	if st.Installed {
+		if !st.Running {
+			if err := service.Start(); service.IsAccessDenied(err) {
+				exe, _ := os.Executable()
+				service.Elevate(exe, []string{"service", "start"})
+			}
+			waitListening(cfg.Addr, 15*time.Second)
+		}
+		if exe, err := os.Executable(); err == nil {
+			startDetached(exe, "tray", "-addr", cfg.Addr) // quits at once if it's already showing
+		}
+	} else if !waitListening(cfg.Addr, 0) {
+		// Not installed and not running: run Printty here, in the background.
+		if exe, err := os.Executable(); err == nil {
+			startDetached(exe, "-background", "-addr", cfg.Addr)
+			waitListening(cfg.Addr, 15*time.Second)
+		}
+	}
+	if err := tray.Open(localURL(cfg) + "/admin"); err != nil {
+		fmt.Fprintln(os.Stderr, "open the browser:", err)
+		return 1
+	}
+	return 0
+}

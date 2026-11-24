@@ -34,7 +34,8 @@
   --color-on-soft: oklch(34% 0.06 190);             /* text on accent-soft */
   --color-warn: oklch(48% 0.11 65); --color-warn-soft: oklch(94% 0.045 80);
   --color-ok: oklch(46% 0.1 155); --color-ok-soft: oklch(94% 0.04 155);
-  --radius-screen: 36px; --radius-card: 22px; --radius-inner: 14px;
+  --radius-screen: 24px; --radius-card: 14px; --radius-inner: 10px;
+  --radius-control: 10px; --radius-control-in: 7px;           /* buttons, inputs, segmented controls; their inner parts */
   --shadow-card: 0 1px 0 oklch(20% 0.01 80 / 0.05), 0 14px 32px -14px oklch(20% 0.02 80 / 0.2);
   --body-weight: 400; --head-weight: 500;
 }

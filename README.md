@@ -28,7 +28,22 @@ Sharing a USB or home printer with phones is still awkward: enterprise tools (Pa
 - **Light and dark mode**, phone-first UI (Ribbon theme, see [DESIGN.md](DESIGN.md)).
 - Files are deleted after printing; requests expire after 24 hours.
 
-## Quick start (Windows)
+## Install
+
+Download from [Releases](https://github.com/TriptoAfsin/printty/releases/latest):
+
+| System | Download | What it does |
+| --- | --- | --- |
+| **Windows** | `Printty_<version>_x64_setup.exe` (`arm64` for Windows on Arm) | Installs Printty as a service that starts with Windows, adds the tray icon and a Start menu entry, allows it through the firewall on Private networks, and opens the setup page. One administrator prompt. Upgrades in place; your users and settings are kept. |
+| Windows, no install | `Printty_<version>_windows_x64_portable.zip` | Unzip, run `printty.exe`. Install the service later from **Settings**. |
+| Linux | `Printty_<version>_linux_amd64.tar.gz` (or `arm64`) | Unpack, then `sudo ./install.sh` (systemd; needs CUPS). Untested on hardware so far. |
+| macOS | `Printty_<version>_darwin_arm64.tar.gz` (or `amd64`) | Run `./printty`. Untested so far. |
+
+The builds aren't code-signed yet: if Windows SmartScreen says "Windows protected your PC", choose **More info › Run anyway**. Checksums are in `SHA256SUMS.txt`.
+
+After installing, the setup page opens on the PC with the setup code already filled in: create the owner account, and you're done. Telegram alerts: copy `printty.env.example` (in the install folder) to `C:\ProgramData\Printty\printty.env`, fill it in, and choose **Restart Printty** from the tray icon.
+
+## Build from source (Windows)
 
 ```powershell
 go build -trimpath -ldflags "-s -w" -o printty.exe ./cmd/printty
@@ -36,7 +51,7 @@ copy printty.env.example printty.env   # then fill in Telegram if you want alert
 .\printty.exe
 ```
 
-1. The console prints a **setup code**. Open `http://localhost:8631/setup`, enter it, and create the owner account.
+1. Open `http://localhost:8631` on the same PC: the setup code is filled in (it's also printed in the console and saved to `setup-code.txt` in the data folder). Create the owner account.
 2. In **Users**, press **Invite someone** and send the link.
 3. Phones on the same Wi-Fi open the address Printty prints at startup, for example:
    ```
@@ -108,6 +123,10 @@ go test ./...
 PRINTTY_PRINT_TEST=1 go test ./internal/printer/   # real GDI print to "Microsoft Print to PDF", no paper
 ```
 
+`tools/winres.sh <version>` rebuilds printty.exe's icon and version details (`cmd/printty/rsrc_windows_*.syso`, committed). `go run ./tools/mkicon` rebuilds `packaging/windows/printty.ico` from the app icon.
+
+**Releasing:** add a section to [CHANGELOG.md](CHANGELOG.md), then push a tag: `git tag v0.2.0 && git push origin v0.2.0`. [release.yml](.github/workflows/release.yml) tests, builds the installers (Inno Setup), portable zips and Linux/macOS archives, and publishes the release. Run the workflow by hand for a dry run (downloads as workflow artifacts, no release).
+
 `PRINTTY_TEST_OUTPUT_DIR=<folder>` makes the Windows backend print into PDF files there (use with the "Microsoft Print to PDF" printer selected in Settings), so the whole flow can be tested without paper.
 
 ## Roadmap
@@ -120,7 +139,7 @@ PRINTTY_PRINT_TEST=1 go test ./internal/printer/   # real GDI print to "Microsof
 | 3 | Saved queue, status monitor, hold-and-retry, manual duplex, history | Done (needs a real G1010 power-off test) |
 | 3a | Telegram alerts with Approve/Reject, limits, cleanup | Done; mDNS name and QR code to do |
 | 3b | PWA: manifest, service worker, share target | Done; HTTPS setup to document per platform |
-| 4 | Run as a Windows service or at sign-in, tray icon | Done (tested: install from the UI, PDF engine inside the service, tray start/stop, removal). CUPS on real hardware and release builds to do |
+| 4 | Run as a Windows service or at sign-in, tray icon, installer and release builds | Done (tested: install from the UI, PDF engine inside the service, tray start/stop, removal). CUPS on real hardware to do |
 | Later | Web push, direct IPP, "PC is off" relay, Office files, passkeys | |
 
 ## License

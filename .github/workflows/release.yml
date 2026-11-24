@@ -1,0 +1,162 @@
+name: Release
+
+# A v* tag (for example v0.1.0) builds every download and publishes a GitHub
+# release with notes from CHANGELOG.md. Run it by hand to build the downloads
+# as workflow artifacts only (a dry run), without touching releases.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0-dev.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Windows: printty.exe for x64 and Arm, each as an installer (sets up the
+  # service, tray icon and Start menu entry) and as a portable zip.
+  windows:
+    needs: version
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        run: |
+          go vet ./...
+          go test ./...
+      - name: Icon and version details for printty.exe
+        shell: bash
+        # Windows file versions are numbers only: 0.2.0-rc.1 becomes 0.2.0.
+        run: bash tools/winres.sh "${VERSION%%-*}"
+      - name: Build
+        shell: bash
+        run: |
+          for arch in amd64 arm64; do
+            GOOS=windows GOARCH=$arch go build -trimpath -ldflags "-s -w -X main.version=$VERSION" \
+              -o dist/windows-$arch/printty.exe ./cmd/printty
+          done
+      - name: Installers
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          foreach ($a in @(@{go='amd64'; inno='x64'}, @{go='arm64'; inno='arm64'})) {
+            & $iscc "/DAppVersion=$env:VERSION" "/DArch=$($a.inno)" "/DSourceDir=..\..\dist\windows-$($a.go)" packaging\windows\printty.iss
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Portable zips
+        shell: pwsh
+        run: |
+          foreach ($a in @(@{go='amd64'; name='x64'}, @{go='arm64'; name='arm64'})) {
+            $dir = "dist\windows-$($a.go)"
+            Copy-Item printty.env.example, README.md $dir
+            Compress-Archive -Path "$dir\*" -DestinationPath "dist\Printty_${env:VERSION}_windows_$($a.name)_portable.zip"
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/*_setup.exe
+            dist/*.zip
+          if-no-files-found: error
+
+  # Linux and macOS: one static binary each (CUPS does the printing), packed
+  # with tar on Linux so the executable bit survives.
+  unix:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        run: |
+          go vet ./...
+          go test ./...
+      - name: Build and pack
+        run: |
+          for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            os=${t%/*}; arch=${t#*/}
+            name="Printty_${VERSION}_${os}_${arch}"
+            mkdir -p "dist/$name"
+            GOOS=$os GOARCH=$arch go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o "dist/$name/printty" ./cmd/printty
+            cp printty.env.example README.md "dist/$name/"
+            if [ "$os" = linux ]; then cp packaging/linux/printty.service packaging/linux/install.sh "dist/$name/"; fi
+            tar -C dist -czf "dist/$name.tar.gz" "$name"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unix
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [version, windows, unix]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Checksums
+        run: cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Release notes
+        run: |
+          NOTES=$(sed -n "/^## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '1d;$d')
+          [ -n "$NOTES" ] || NOTES="See CHANGELOG.md."
+          V=$VERSION
+          cat > body.md <<NOTES_EOF
+          $NOTES
+
+          ## Install
+
+          | System | Download |
+          |---|---|
+          | **Windows** (Intel, AMD) | \`Printty_${V}_x64_setup.exe\`: installs Printty as a service that starts with Windows, adds the tray icon and opens the setup page. Windows asks for administrator permission once. |
+          | Windows on Arm | \`Printty_${V}_arm64_setup.exe\` |
+          | Windows, no install | \`Printty_${V}_windows_x64_portable.zip\`: unzip and run \`printty.exe\`; install the service later from Settings. |
+          | Linux (CUPS) | \`Printty_${V}_linux_amd64.tar.gz\` or \`_arm64\`: unpack and run \`sudo ./install.sh\` (systemd). Not yet tested on real hardware. |
+          | macOS (CUPS) | \`Printty_${V}_darwin_arm64.tar.gz\` (Apple silicon) or \`_amd64\` (Intel). Not yet tested. |
+
+          After installing, open the page on the PC itself (the Start menu entry **Printty** does that): the setup code is filled in, and you create the owner account. Phones on the same Wi-Fi then use the address shown under **Open on phones**.
+
+          ## Unsigned builds
+          These downloads aren't code-signed. Windows SmartScreen may say "Windows protected your PC": choose **More info**, then **Run anyway**. Check any download against \`SHA256SUMS.txt\`.
+          NOTES_EOF
+          cat body.md
+      - name: Publish
+        run: |
+          pre=""
+          case "$VERSION" in *-*) pre="--prerelease";; esac
+          gh release create "$GITHUB_REF_NAME" out/* --title "Printty $VERSION" --notes-file body.md $pre

@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/subtle"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -38,7 +39,20 @@ func (s *Server) getSetup(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	s.render(w, r, "setup", page{Title: "Set up Printty"})
+	// On the PC itself the code is already readable in the data folder, so fill
+	// it in (the installer opens this page right after starting the service).
+	data := map[string]any{}
+	if fromThisPC(r) {
+		data["Code"] = s.setup
+	}
+	s.render(w, r, "setup", page{Title: "Set up Printty", Data: data})
+}
+
+// fromThisPC reports whether the request comes over loopback (by the TCP
+// peer address, never a header).
+func fromThisPC(r *http.Request) bool {
+	ip := net.ParseIP(clientIP(r))
+	return ip != nil && ip.IsLoopback()
 }
 
 func (s *Server) postSetup(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +66,7 @@ func (s *Server) postSetup(w http.ResponseWriter, r *http.Request) {
 	}
 	code := strings.ToUpper(strings.TrimSpace(r.FormValue("code")))
 	if subtle.ConstantTimeCompare([]byte(code), []byte(s.setup)) != 1 {
-		s.render(w, r, "setup", page{Title: "Set up Printty", Error: "That setup code is wrong. It's shown in the window where Printty is running."})
+		s.render(w, r, "setup", page{Title: "Set up Printty", Error: "That setup code is wrong. Open this page on the Printty PC itself, or find the code in setup-code.txt in Printty's data folder."})
 		return
 	}
 	u, err := s.newUser(r, store.RoleAdmin)

@@ -1,0 +1,23 @@
+# systemd unit for Printty. install.sh copies it to /etc/systemd/system.
+[Unit]
+Description=Printty print server
+After=network-online.target cups.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/printty
+Environment=PRINTTY_DATA_DIR=/var/lib/printty
+# Read by systemd as root, so it can stay private (0600).
+EnvironmentFile=-/etc/printty/printty.env
+DynamicUser=yes
+StateDirectory=printty
+Restart=on-failure
+RestartSec=10
+# Printty only needs the network and CUPS (lp, lpstat).
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

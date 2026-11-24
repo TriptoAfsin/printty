@@ -8,7 +8,7 @@ The locked system for Printty's web UI (client and admin). Every Hallmark run re
 - Theme: Ribbon (chosen 2026-11-24 over Ultraviolet, after Wayfind, Terrazzo and Darkroom were rejected as too square)
 - Axes: light/grotesk-sans/chromatic-teal · posture: committed
 - Modes: **light + dark**, parity per Hallmark `dark-mode.md`. Light = Ribbon `dawn`; dark = blue-black, re-derived, same teal hue.
-- Feel: modern, elegant, rounded. Nothing square: pills for controls, 22px cards, 36px phone screens.
+- Feel: modern, elegant, softly rounded: never square, never bubbly. 14px cards, 10px buttons and inputs (7px for parts inside them). Pills only for small status things: tags, counts, switches, progress. (Toned down on 2026-11-24 at the owner's request: pills everywhere read as too round.)
 - Approved mock-up: the "Ribbon" rows of the Printty UI mock-ups canvas; its stylesheet is kept as `docs/mockup-reference.css` (`.app.rb` blocks).
 
 ## Tokens
@@ -22,7 +22,7 @@ The locked system for Printty's web UI (client and admin). Every Hallmark run re
   --color-accent-ink: oklch(98% 0.006 85);  --color-on-soft: oklch(34% 0.06 190);  --color-focus: oklch(52% 0.09 190);
   --color-warn / --color-warn-soft, --color-ok / --color-ok-soft, --color-error
   --font-display: "Instrument Sans";  --font-body: "Figtree";  --font-outlier: "JetBrains Mono";
-  --radius-screen: 36px;  --radius-card: 22px;  --radius-inner: 14px;  --radius-pill: 999px;
+  --radius-screen: 24px;  --radius-card: 14px;  --radius-inner: 10px;  --radius-control: 10px;  --radius-control-in: 7px;  --radius-pill: 999px;
 }
 [data-mode="dark"] { paper 15% / paper-2 18.5% / paper-3 22% / raised 25% (hue 230), ink 94%, accent oklch(74% 0.085 190) with dark text, shadows replaced by a 1px inset ring, body weight 350 }
 ```

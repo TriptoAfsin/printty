@@ -6,6 +6,7 @@
 //	printty service uninstall    remove the service
 //	printty service start|stop|restart|status
 //	printty tray                 the notification-area icon for the service
+//	printty open                 open Printty in the browser (Start menu shortcut)
 package main
 
 import (
@@ -48,6 +49,9 @@ func main() {
 	}
 	if len(os.Args) > 1 && os.Args[1] == "tray" {
 		os.Exit(trayCmd(os.Args[2:]))
+	}
+	if len(os.Args) > 1 && os.Args[1] == "open" {
+		os.Exit(openCmd(os.Args[2:]))
 	}
 
 	fs := flag.NewFlagSet("printty", flag.ExitOnError)
@@ -306,6 +310,15 @@ func serviceCmd(args []string) int {
 		}
 		report(nil)
 		fmt.Println("Installed the Printty service. It starts automatically with Windows.")
+		if *start && service.Status().Running {
+			// Reinstalled over a running service: restart it on the new settings.
+			if err := service.Restart(); err != nil {
+				fmt.Fprintln(os.Stderr, "installed, but couldn't restart it:", err)
+				return 1
+			}
+			fmt.Println("Restarted.")
+			return 0
+		}
 		if *start {
 			// The copy of Printty that asked for this may still hold the port: wait for it.
 			for i := 0; i < 120; i++ {
@@ -319,6 +332,7 @@ func serviceCmd(args []string) int {
 				fmt.Fprintln(os.Stderr, "installed, but couldn't start it:", err)
 				return 1
 			}
+			waitListening(cfg.Addr, 15*time.Second)
 			fmt.Println("Started.")
 		}
 		return 0

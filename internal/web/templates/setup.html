@@ -7,7 +7,7 @@
   </div>
   {{template "messages" .}}
   <form class="stack" method="post" action="/setup">
-    <label class="field"><span class="label">Setup code <span class="muted">In the Printty window, or setup-code.txt in its data folder</span></span><input class="input" name="code" autocomplete="one-time-code" autocapitalize="characters" required></label>
+    <label class="field"><span class="label">Setup code <span class="muted">{{if and .Data .Data.Code}}Filled in because you're on the Printty PC{{else}}On the Printty PC this fills itself in; or see setup-code.txt in its data folder{{end}}</span></span><input class="input" name="code" autocomplete="one-time-code" autocapitalize="characters" required {{with .Data}}{{with .Code}}value="{{.}}"{{end}}{{end}}></label>
     <label class="field"><span class="label">Your name</span><input class="input" name="name" autocomplete="name" required></label>
     <label class="field"><span class="label">Username</span><input class="input" name="username" autocomplete="username" autocapitalize="none" required></label>
     <label class="field"><span class="label">Password <span class="muted">8 characters or more</span></span><input class="input" type="password" name="password" autocomplete="new-password" minlength="8" required></label>
