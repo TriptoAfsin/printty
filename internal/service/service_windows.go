@@ -28,6 +28,7 @@ const (
 	description = "Shares this computer's printer with phones on the local network."
 	runKey      = `Software\Microsoft\Windows\CurrentVersion\Run`
 	firewall    = "Printty"
+	trayValue   = "Printty tray"
 )
 
 // Supported reports whether this OS has service and autostart support.
@@ -103,8 +104,17 @@ func Install(exe string, args []string, port string) error {
 		{Type: mgr.ServiceRestart, Delay: 30 * time.Second},
 		{Type: mgr.ServiceRestart, Delay: 2 * time.Minute},
 	}, uint32((24 * time.Hour).Seconds()))
+	if err := allowUserControl(s.Handle); err != nil {
+		return fmt.Errorf("let users start and stop the service: %w", err)
+	}
 	openFirewall(exe, port)
-	return nil
+	trayArgs := []string{exe, "tray"}
+	for i := 0; i+1 < len(args); i += 2 {
+		if args[i] == "-addr" {
+			trayArgs = append(trayArgs, "-addr", args[i+1])
+		}
+	}
+	return setTrayAutostart(Quote(trayArgs))
 }
 
 // Uninstall stops and removes the service and its firewall rule.
@@ -132,36 +142,95 @@ func remove(stop bool) error {
 		return fmt.Errorf("remove service: %w", err)
 	}
 	netsh("advfirewall", "firewall", "delete", "rule", "name="+firewall)
+	removeTrayAutostart()
 	return nil
 }
 
+// Start, Stop and Restart need no administrator rights once the service is
+// installed: Install lets signed-in users start and stop it (from the tray).
 func Start() error {
-	m, err := mgr.Connect()
-	if err != nil {
-		return err
-	}
-	defer m.Disconnect()
-	s, err := m.OpenService(Name)
-	if err != nil {
-		return fmt.Errorf("the Printty service isn't installed")
-	}
-	defer s.Close()
-	return s.Start()
+	return withService(windows.SERVICE_START, func(h windows.Handle) error {
+		return windows.StartService(h, 0, nil)
+	})
 }
 
 func Stop() error {
-	m, err := mgr.Connect()
+	return withService(windows.SERVICE_STOP|windows.SERVICE_QUERY_STATUS, func(h windows.Handle) error {
+		var ss windows.SERVICE_STATUS
+		err := windows.ControlService(h, windows.SERVICE_CONTROL_STOP, &ss)
+		if errors.Is(err, windows.ERROR_SERVICE_NOT_ACTIVE) {
+			return nil
+		}
+		return err
+	})
+}
+
+// Restart stops the service, waits for it to stop, and starts it again.
+func Restart() error {
+	if err := Stop(); err != nil {
+		return err
+	}
+	for i := 0; i < 40 && statusOf(Name).Running; i++ {
+		time.Sleep(500 * time.Millisecond)
+	}
+	return Start()
+}
+
+func withService(access uint32, do func(h windows.Handle) error) error {
+	scm, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT)
+	if err != nil {
+		return fmt.Errorf("connect to Windows services: %w", err)
+	}
+	defer windows.CloseServiceHandle(scm)
+	h, err := windows.OpenService(scm, windows.StringToUTF16Ptr(Name), access)
+	if errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
+		return fmt.Errorf("the Printty service isn't installed")
+	}
 	if err != nil {
 		return err
 	}
-	defer m.Disconnect()
-	s, err := m.OpenService(Name)
+	defer windows.CloseServiceHandle(h)
+	return do(h)
+}
+
+// IsAccessDenied reports whether err means Windows wants administrator rights.
+func IsAccessDenied(err error) bool { return errors.Is(err, windows.ERROR_ACCESS_DENIED) }
+
+// userControl is the default service security plus start (RP) and stop (WP)
+// for interactive users (IU), so the tray can control Printty without a prompt.
+const userControl = "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPWPLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)"
+
+func allowUserControl(h windows.Handle) error {
+	sd, err := windows.SecurityDescriptorFromString(userControl)
 	if err != nil {
-		return fmt.Errorf("the Printty service isn't installed")
+		return err
 	}
-	defer s.Close()
-	_, err = s.Control(svc.Stop)
-	return err
+	r, _, e := procSetServiceObjectSecurity.Call(uintptr(h), uintptr(windows.DACL_SECURITY_INFORMATION), uintptr(unsafe.Pointer(sd)))
+	if r == 0 {
+		return e
+	}
+	return nil
+}
+
+var procSetServiceObjectSecurity = windows.NewLazySystemDLL("advapi32.dll").NewProc("SetServiceObjectSecurity")
+
+// ---- tray icon for every user (the service itself can't show one)
+
+// setTrayAutostart writes the HKLM Run entry that starts "printty tray" at each sign-in.
+func setTrayAutostart(command string) error {
+	k, _, err := registry.CreateKey(registry.LOCAL_MACHINE, runKey, registry.SET_VALUE)
+	if err != nil {
+		return err
+	}
+	defer k.Close()
+	return k.SetStringValue(trayValue, command)
+}
+
+func removeTrayAutostart() {
+	if k, err := registry.OpenKey(registry.LOCAL_MACHINE, runKey, registry.SET_VALUE); err == nil {
+		k.DeleteValue(trayValue)
+		k.Close()
+	}
 }
 
 func netsh(args ...string) error {

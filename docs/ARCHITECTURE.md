@@ -16,7 +16,7 @@ Printty is one Go binary with six parts: web server, users and auth, job queue, 
 | Memory trim | `internal/memtrim` | GC, return freed memory to the OS, trim the working set after work |
 | Store | `internal/store` | Users, sessions, invites, jobs, settings in one JSON file, atomic writes |
 | Config | `internal/config` | Environment variables and `printty.env` |
-| Entry point | `cmd/printty` | Flags, `worker` mode; service install planned (phase 4) |
+| Entry point | `cmd/printty` | Flags, `worker` mode, `service` and `tray` commands |
 
 ## Target hardware (v1)
 
@@ -65,7 +65,8 @@ Measured on Windows 11 after two jobs: 3.4 MB working set idle, 5.9 MB while ser
 
 - `internal/service` uses `golang.org/x/sys/windows/svc` (no new dependency). `printty service install` creates an auto-start (delayed) service running as LocalSystem with restart-on-failure, and a Private-profile firewall rule for the program and port. If not elevated, the command re-runs itself through `ShellExecuteEx` "runas" (UAC).
 - From the web UI, the admin presses **Install as a Windows service**: the user-run copy launches the elevated installer with `-start -result <file>`, waits for "ok", shows a switching page and exits; the installer waits for the port to free up, then starts the service.
-- A service removes itself with `RemoveSelf` (delete + firewall rule) and exits after replying.
+- A service removes itself with `RemoveSelf` (delete + firewall rule + tray entry) and exits after replying.
+- Tray icon (`internal/tray`, raw `Shell_NotifyIcon` + a hidden window, no dependency). A copy started by hand or at sign-in shows the icon itself (Exit stops it). A service lives in session 0 and can't, so install writes an HKLM `Run` entry for `printty tray -addr …`, started in every user's session: it polls the service state every 5 s through the SCM (grey icon when stopped) and quits when the service is gone. Install also sets the service DACL so interactive users (IU) may start and stop it, so the tray needs no UAC prompt. The icon is scaled from the embedded 192 px PNG to the tray size at startup (per-monitor DPI aware). Cost: about 1.6 MB and 2 threads in the server; the helper idles at about 2 MB.
 - Start at sign-in writes `HKCU\...\Run\Printty` = `printty.exe -background -addr … -data …`; background mode detaches the console and logs to `<data>/printty.log`.
 - Verified: `Windows.Data.Pdf` works in session 0 as LocalSystem (self-test), and the service sees the user-installed Canon G1010. Inside the service the Windows default printer is a different one, so Printty always uses its saved printer.
 

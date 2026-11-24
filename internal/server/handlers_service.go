@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -94,6 +95,15 @@ func (s *Server) postServiceInstall(w http.ResponseWriter, r *http.Request, v vi
 	}
 	// Installed: stop this copy so the service can take over the port.
 	service.DisableAutostart()
+	// The service can't show an icon on the desktop: start its tray helper now
+	// (Windows starts it at every sign-in from now on).
+	if exe, err := os.Executable(); err == nil {
+		tray := exec.Command(exe, "tray", "-addr", s.rt.Addr, "-welcome")
+		tray.SysProcAttr = detached()
+		if err := tray.Start(); err == nil {
+			tray.Process.Release()
+		}
+	}
 	s.render(w, r, "switching", page{Title: "Switching to the service", V: s.who(r)})
 	go func() {
 		time.Sleep(time.Second)

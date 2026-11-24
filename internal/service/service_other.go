@@ -46,3 +46,6 @@ func ExeDir() string {
 	}
 	return filepath.Dir(exe)
 }
+
+func Restart() error            { return errUnsupported }
+func IsAccessDenied(error) bool { return false }

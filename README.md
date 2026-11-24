@@ -55,7 +55,18 @@ In **Settings › Start with Windows**:
 - **Install as a Windows service** (recommended): starts at boot before anyone signs in, restarts itself if it stops, and opens port 8631 for Private networks in Windows Firewall. Windows shows one permission prompt on the PC's screen; the running copy hands over to the service on the same address. **Remove the service** undoes all of it.
 - **Start when I sign in**: no admin needed; runs hidden (`-background`) while you're signed in.
 
-From a terminal: `printty service install -start`, `printty service uninstall`, `printty service status` (it asks for admin rights itself). The service runs as LocalSystem, reads `printty.env` next to `printty.exe` and in the data folder, and logs to `C:\ProgramData\Printty\printty.log`. On first run without a console, the setup code is in `setup-code.txt` in the data folder. **Check printing works** in Settings renders a test page without printing, to confirm the PDF engine works in your setup.
+### The tray icon
+
+Printty shows its printer icon in the notification area (next to the clock; Windows 11 may tuck new icons under **^**, drag it out to keep it visible). Hover for the status and address. **Click** it to open Printty. **Right-click** for the menu:
+
+| Running as | Menu |
+| --- | --- |
+| A Windows service | Open Printty · Copy link for phones · Restart · Stop · Hide this icon. When the service is stopped the icon turns grey and a click starts it again. |
+| Started by hand or at sign-in | Open Printty · Copy link for phones · Show log · Exit Printty |
+
+A service runs in its own session and can't draw on your desktop, so installing the service also adds a small helper (`printty tray`) that Windows starts at every sign-in; it controls the service and quits by itself when the service is removed. Signed-in users can start, stop and restart the service without an admin prompt.
+
+From a terminal: `printty service install -start`, `printty service uninstall`, `printty service start|stop|restart|status` (install and uninstall ask for admin rights themselves). The service runs as LocalSystem, reads `printty.env` next to `printty.exe` and in the data folder, and logs to `C:\ProgramData\Printty\printty.log`. On first run without a console, the setup code is in `setup-code.txt` in the data folder. **Check printing works** in Settings renders a test page without printing, to confirm the PDF engine works in your setup.
 
 ## Configuration
 
@@ -109,7 +120,7 @@ PRINTTY_PRINT_TEST=1 go test ./internal/printer/   # real GDI print to "Microsof
 | 3 | Saved queue, status monitor, hold-and-retry, manual duplex, history | Done (needs a real G1010 power-off test) |
 | 3a | Telegram alerts with Approve/Reject, limits, cleanup | Done; mDNS name and QR code to do |
 | 3b | PWA: manifest, service worker, share target | Done; HTTPS setup to document per platform |
-| 4 | Run as a Windows service or at sign-in | Done (tested: install from the UI, PDF engine inside the service, removal). CUPS on real hardware and release builds to do |
+| 4 | Run as a Windows service or at sign-in, tray icon | Done (tested: install from the UI, PDF engine inside the service, tray start/stop, removal). CUPS on real hardware and release builds to do |
 | Later | Web push, direct IPP, "PC is off" relay, Office files, passkeys | |
 
 ## License

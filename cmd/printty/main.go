@@ -4,7 +4,8 @@
 //	printty -background          run without a window (used for start at sign-in)
 //	printty service install      install as a Windows service (asks for admin)
 //	printty service uninstall    remove the service
-//	printty service start|stop|status
+//	printty service start|stop|restart|status
+//	printty tray                 the notification-area icon for the service
 package main
 
 import (
@@ -44,6 +45,9 @@ func main() {
 	}
 	if len(os.Args) > 1 && os.Args[1] == "service" {
 		os.Exit(serviceCmd(os.Args[2:]))
+	}
+	if len(os.Args) > 1 && os.Args[1] == "tray" {
+		os.Exit(trayCmd(os.Args[2:]))
 	}
 
 	fs := flag.NewFlagSet("printty", flag.ExitOnError)
@@ -174,16 +178,11 @@ func run(ctx context.Context, cfg config.Config, mode string) error {
 		}
 	}()
 	go q.Run(ctx)
+	if mode != "service" { // a service has no desktop; "printty tray" shows its icon
+		startTray(ctx, cfg, mode, stop)
+	}
 
-	scheme := "http"
-	if secure {
-		scheme = "https"
-	}
-	host, port, _ := net.SplitHostPort(cfg.Addr)
-	if host == "" || host == "0.0.0.0" || host == "::" {
-		host = "localhost"
-	}
-	local := scheme + "://" + net.JoinHostPort(host, port)
+	local := localURL(cfg)
 	slog.Info("printty is running", "version", version, "mode", mode, "url", local, "data", cfg.DataDir, "printer", q.Printer(ctx), "telegram", tg != nil)
 	for _, a := range addrs {
 		slog.Info("open on phones", "url", a.URL, "via", a.Label)
@@ -233,7 +232,7 @@ func serviceCmd(args []string) int {
 		return 2
 	}
 	if len(args) == 0 {
-		fmt.Println("usage: printty service install|uninstall|start|stop|status [-addr :8631] [-data DIR] [-start]")
+		fmt.Println("usage: printty service install|uninstall|start|stop|restart|status [-addr :8631] [-data DIR] [-start]")
 		return 2
 	}
 	cmd := args[0]
@@ -264,7 +263,21 @@ func serviceCmd(args []string) int {
 		s := service.Status()
 		fmt.Printf("service installed: %v\nservice running:   %v\nstart at sign-in:  %v\n", s.Installed, s.Running, s.AtSignIn)
 		return 0
-	case "install", "uninstall", "start", "stop":
+	case "start", "stop", "restart":
+		// Signed-in users may start and stop an installed service without a prompt.
+		var err error
+		switch cmd {
+		case "start":
+			err = service.Start()
+		case "stop":
+			err = service.Stop()
+		default:
+			err = service.Restart()
+		}
+		if !service.IsAccessDenied(err) {
+			return report(err)
+		}
+	case "install", "uninstall":
 	default:
 		fmt.Fprintln(os.Stderr, "unknown command:", cmd)
 		return 2
@@ -315,6 +328,8 @@ func serviceCmd(args []string) int {
 		return report(service.Start())
 	case "stop":
 		return report(service.Stop())
+	case "restart":
+		return report(service.Restart())
 	}
 	return 0
 }

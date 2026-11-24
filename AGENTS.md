@@ -34,6 +34,7 @@ internal/queue/         job lifecycle: approval, printing, hold, manual duplex, 
 internal/printer/       Backend interface; pdf_windows.go (WinRT), printer_windows.go (GDI), printer_unix.go (CUPS)
 internal/worker/        runs heavy printer work in a child process
 internal/memtrim/       return memory to the OS after work
+internal/tray/          Windows notification-area icon (Shell_NotifyIcon); `printty tray` helper for the service
 internal/notify/        Telegram (send + long-poll callbacks, webhook detection)
 internal/web/           embedded templates/ and static/ (CSS, JS, fonts, icons, manifest, service worker)
 docs/                   architecture notes, mock-up stylesheet
@@ -67,4 +68,4 @@ go run ./cmd/printty                 # run locally
 
 ## Current phase
 
-v0.1 works end to end on Windows (tested by printing to "Microsoft Print to PDF" with `PRINTTY_TEST_OUTPUT_DIR`). Service install and start-at-sign-in are done and tested. Next: a real-paper test on the Canon G1010 (including switching it off mid-job), a "printer is back" alert, mDNS + QR code. Secrets live in `printty.env` (gitignored): never print, log or commit them. Testing prints to a virtual printer can move the Windows default printer: check and restore it afterwards.
+v0.1 works end to end on Windows (tested by printing to "Microsoft Print to PDF" with `PRINTTY_TEST_OUTPUT_DIR`). Service install, start-at-sign-in and the tray icon are done and tested. Next: a real-paper test on the Canon G1010 (including switching it off mid-job), a "printer is back" alert, mDNS + QR code. Secrets live in `printty.env` (gitignored): never print, log or commit them. Testing prints to a virtual printer can move the Windows default printer: check and restore it afterwards.
