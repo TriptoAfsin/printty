@@ -338,7 +338,7 @@ func (q *Queue) print(ctx context.Context, j store.Job, set store.Settings) {
 	phase := 0
 	manual := (j.Options.Duplex == printer.LongEdge || j.Options.Duplex == printer.ShortEdge) && !set.AutoDuplex && printer.Sheets(len(pages), j.Options) > 1
 	if manual {
-		fronts, backs := printer.SplitDuplexSheets(pages, printer.PerSheet(j.Options), set.FlipReverse)
+		fronts, backs := printer.SplitDuplexSheets(pages, printer.SheetSize(j.Options), set.FlipReverse)
 		if j.Phase == 2 {
 			pass, phase = backs, 2
 		} else {

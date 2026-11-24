@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -112,6 +113,20 @@ func parseLayout(f map[string]string, docPages int, caps printer.Caps, o *printe
 		o.PerSheet = printer.PerSheet(printer.Options{PerSheet: n})
 		if o.PerSheet == 1 {
 			o.PerSheet = 0
+		}
+	}
+	if n, err := strconv.Atoi(f["repeat"]); err == nil {
+		o.Repeat = printer.RepeatCount(printer.Options{Repeat: n})
+		if o.Repeat == 1 {
+			o.Repeat = 0
+		}
+	}
+	if n, err := strconv.Atoi(f["scale"]); err == nil && n >= 10 && n < 100 {
+		o.Scale = n
+	}
+	for key, dst := range map[string]*float64{"offx": &o.OffX, "offy": &o.OffY} {
+		if v, err := strconv.ParseFloat(f[key], 64); err == nil && !math.IsNaN(v) {
+			*dst = math.Max(-1, math.Min(1, math.Round(v*1000)/1000))
 		}
 	}
 	// The checkbox is in every form; unticked sends nothing.

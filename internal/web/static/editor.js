@@ -53,18 +53,32 @@
   }
 
   function grid(n, wide) {
-    var g = { 2: [2, 1], 4: [2, 2], 6: [3, 2], 9: [3, 3] }[n] || [1, 1];
+    var g = { 2: [2, 1], 3: [3, 1], 4: [2, 2], 6: [3, 2], 8: [4, 2], 9: [3, 3] }[n] || [1, 1];
     return wide ? g : [g[1], g[0]];
+  }
+
+  // How big a w×h page gets in an n-slot grid on an A4-shaped sheet.
+  function bestScale(n, w, h, wide) {
+    var sw = wide ? 11.4 : 8, sh = wide ? 8 : 11.4, g = grid(n, wide);
+    var cw = (sw - GAP * (g[0] - 1)) / g[0], ch = (sh - GAP * (g[1] - 1)) / g[1];
+    return Math.min(cw / w, ch / h); // upright, like layout.go
   }
 
   function sheetOrientation(o, first) {
     if (o.orientation) return o.orientation;
+    if (o.repeat > 1) return bestScale(o.repeat, first[0], first[1], true) > bestScale(o.repeat, first[0], first[1], false) ? "landscape" : "portrait";
     if (o.perSheet === 2 || o.perSheet === 6) return first[0] > first[1] ? "portrait" : "landscape";
     return "portrait";
   }
 
   function layout(pages, areaW, areaH, o) {
-    var n = o.perSheet, g = grid(n, areaW > areaH), cols = g[0], rows = g[1];
+    var n = o.repeat > 1 ? o.repeat : o.perSheet;
+    if (o.repeat > 1) {
+      var rep = [];
+      pages.forEach(function (p) { for (var k = 0; k < o.repeat; k++) rep.push(p); });
+      pages = rep;
+    }
+    var g = grid(n, areaW > areaH), cols = g[0], rows = g[1];
     var gap = n > 1 ? GAP : 0;
     var cw = (areaW - gap * (cols - 1)) / cols, ch = (areaH - gap * (rows - 1)) / rows;
     var sheets = [];
@@ -78,13 +92,25 @@
         else if (o.autoRotate && (w > h) !== (cell.w > cell.h) && Math.abs(w - h) > 0.01) r = 90;
         if (r === 90 || r === 270) { var t = w; w = h; h = t; }
         var scale = o.fit === "fill" ? Math.max(cell.w / w, cell.h / h) : o.fit === "actual" ? 1 : Math.min(cell.w / w, cell.h / h);
+        if (o.scale > 0 && o.scale < 100) scale *= Math.max(o.scale, 10) / 100;
         var dw = w * scale, dh = h * scale;
-        sheet.push({ page: p, rotate: r, cell: cell, rect: { x: cell.x + (cell.w - dw) / 2, y: cell.y + (cell.h - dh) / 2, w: dw, h: dh } });
+        var fx = (1 + clamp1(o.offX)) / 2, fy = (1 + clamp1(o.offY)) / 2;
+        sheet.push({ page: p, rotate: r, cell: cell, rect: { x: cell.x + (cell.w - dw) * fx, y: cell.y + (cell.h - dh) * fy, w: dw, h: dh } });
       }
       sheets.push(sheet);
     }
     return sheets;
   }
+
+  function clamp1(v) { return Math.max(-1, Math.min(1, +v || 0)); }
+
+  // Photo controls (images only).
+  var repeatIn = form.querySelector('input[name="repeat"]');
+  var scaleIn = form.querySelector('input[name="scale"]');
+  var offXIn = form.querySelector('input[name="offx"]'), offYIn = form.querySelector('input[name="offy"]');
+  var scaleOut = form.querySelector("[data-scale-out]");
+  var photo = !!repeatIn;
+  var lastScale = 1, lastSheets = [];
 
   function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
 
@@ -97,8 +123,12 @@
     var o = {
       orientation: val("orientation"), fit: val("fit"),
       perSheet: +(val("persheet") || 1),
+      repeat: photo ? +(val("repeat") || 1) : 1,
+      scale: scaleIn ? +scaleIn.value : 100,
+      offX: offXIn ? +offXIn.value : 0, offY: offYIn ? +offYIn.value : 0,
       autoRotate: form.querySelector('input[name="autorotate"]').checked
     };
+    if (scaleOut) scaleOut.textContent = o.scale + "%";
     var paper = PAPER[val("paper")] || PAPER.A4;
     var first = included.length ? size(included[0]) : [8.27, 11.69];
     var land = sheetOrientation(o, first) === "landscape";
@@ -110,10 +140,12 @@
     sheets.forEach(function (sh) { sh.forEach(function (pl) { lastRot[pl.page] = pl.rotate; }); });
 
     // Draw up to 24 sheets.
-    var scale = 120 / Math.min(paper[0], paper[1]);
+    var scale = (photo ? 200 : 120) / Math.min(paper[0], paper[1]);
+    lastScale = scale;
+    lastSheets = sheets;
     sheetsEl.textContent = "";
     sheets.slice(0, 24).forEach(function (sh, i) {
-      var se = el("div", "sheet");
+      var se = el("div", "sheet" + (photo ? " can-drag" : ""));
       se.style.width = (pw * scale) + "px";
       se.style.height = (ph * scale) + "px";
       se.setAttribute("aria-label", "Sheet " + (i + 1));
@@ -124,6 +156,8 @@
         ce.style.width = (pl.cell.w * scale) + "px";
         ce.style.height = (pl.cell.h * scale) + "px";
         var box = el("div", "placed");
+        box.dataset.sheet = i;
+        box.dataset.slot = sh.indexOf(pl);
         box.style.left = ((pl.rect.x - pl.cell.x) * scale) + "px";
         box.style.top = ((pl.rect.y - pl.cell.y) * scale) + "px";
         box.style.width = (pl.rect.w * scale) + "px";
@@ -155,6 +189,7 @@
     var twoSided = val("duplex") !== "one-sided";
     var paperCount = twoSided ? Math.ceil(sheets.length / 2) : sheets.length;
     var text = !included.length ? "No pages chosen" :
+      o.repeat > 1 ? o.repeat + " copies on " + paperCount * copies + (paperCount * copies === 1 ? " sheet" : " sheets") :
       included.length + (included.length === 1 ? " page" : " pages") + " on " + paperCount * copies +
       (paperCount * copies === 1 ? " sheet" : " sheets") + (twoSided ? ", both sides" : "");
     countEl.textContent = text;
@@ -196,6 +231,31 @@
     }
     return out.join(",");
   }
+
+  // Drag a photo in the preview to move it; every copy moves the same way.
+  var drag = null;
+  sheetsEl.addEventListener("pointerdown", function (e) {
+    var box = e.target.closest(".placed");
+    if (!photo || !box) return;
+    var pl = (lastSheets[+box.dataset.sheet] || [])[+box.dataset.slot];
+    if (!pl) return;
+    e.preventDefault();
+    drag = {
+      x: e.clientX, y: e.clientY, offX: +offXIn.value, offY: +offYIn.value,
+      fsX: (pl.cell.w - pl.rect.w) * lastScale, fsY: (pl.cell.h - pl.rect.h) * lastScale
+    };
+  });
+  window.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    // left = free * (1 + off) / 2, so moving dx changes off by 2·dx/free.
+    if (Math.abs(drag.fsX) > 1) offXIn.value = clamp1(drag.offX + 2 * (e.clientX - drag.x) / drag.fsX).toFixed(3);
+    if (Math.abs(drag.fsY) > 1) offYIn.value = clamp1(drag.offY + 2 * (e.clientY - drag.y) / drag.fsY).toFixed(3);
+    render();
+  });
+  window.addEventListener("pointerup", function () { drag = null; });
+  var center = form.querySelector("[data-center]");
+  if (center) center.addEventListener("click", function () { offXIn.value = 0; offYIn.value = 0; render(); });
+  if (scaleIn) scaleIn.addEventListener("input", render);
 
   strip.addEventListener("click", function (e) {
     var pe = e.target.closest("[data-page]");

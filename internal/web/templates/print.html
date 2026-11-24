@@ -1,4 +1,5 @@
 {{define "content"}}
+{{$photo := false}}{{with .Data.Draft}}{{if ne .Kind "pdf"}}{{$photo = true}}{{end}}{{end}}
 <main class="wrap">
   <div>
     <h1 class="head">Print</h1>
@@ -86,6 +87,26 @@
       </div>
     </fieldset>
 
+    {{if $photo}}
+    <fieldset class="field">
+      <legend>Copies on one sheet</legend>
+      <div class="seg">
+        <label><input type="radio" name="repeat" value="1" checked>1</label>
+        <label><input type="radio" name="repeat" value="2">2</label>
+        <label><input type="radio" name="repeat" value="3">3</label>
+        <label><input type="radio" name="repeat" value="4">4</label>
+        <label><input type="radio" name="repeat" value="6">6</label>
+        <label><input type="radio" name="repeat" value="8">8</label>
+      </div>
+    </fieldset>
+    <div class="field">
+      <label class="label row between" for="scale"><span>Image size</span><span class="muted" data-scale-out>100%</span></label>
+      <input class="range" type="range" id="scale" name="scale" min="10" max="100" step="5" value="100">
+    </div>
+    <input type="hidden" name="offx" value="0">
+    <input type="hidden" name="offy" value="0">
+    <div class="row between photo-hint"><span class="small muted">Drag the photo in the preview to move it.</span><button class="btn ghost sm" type="button" data-center>Centre</button></div>
+    {{else}}
     <fieldset class="field">
       <legend>Pages per sheet</legend>
       <div class="seg">
@@ -96,6 +117,7 @@
         <label><input type="radio" name="persheet" value="9">9</label>
       </div>
     </fieldset>
+    {{end}}
 
     <input type="hidden" name="autorotate-shown" value="1">
     <div class="check-wrap">

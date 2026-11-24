@@ -176,9 +176,9 @@ jobs:
           done
           app=dist/dmg/Printty.app/Contents
           mkdir -p "$app/MacOS" "$app/Resources"
-          lipo -create -output "$app/MacOS/printty" dist/printty-amd64 dist/printty-arm64
+          lipo -create -output "$app/MacOS/printty-server" dist/printty-amd64 dist/printty-arm64
           cp packaging/macos/launcher.sh "$app/MacOS/Printty"
-          chmod +x "$app/MacOS/Printty" "$app/MacOS/printty"
+          chmod +x "$app/MacOS/Printty" "$app/MacOS/printty-server"
           sed "s/__VERSION__/${VERSION%%-*}/g" packaging/macos/Info.plist > "$app/Info.plist"
           set=dist/printty.iconset
           mkdir -p "$set"
@@ -188,6 +188,9 @@ jobs:
           done
           iconutil -c icns "$set" -o "$app/Resources/printty.icns"
           ln -s /Applications dist/dmg/Applications
+          # The app must hold both architectures of the real program.
+          lipo -info "$app/MacOS/printty-server" | grep -q "x86_64 arm64"
+          "$app/MacOS/printty-server" -version
       - name: Disk image
         run: hdiutil create -volname Printty -srcfolder dist/dmg -ov -format UDZO "dist/Printty_${VERSION}_macos.dmg"
       - uses: actions/upload-artifact@v4

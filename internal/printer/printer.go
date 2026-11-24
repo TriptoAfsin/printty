@@ -31,6 +31,12 @@ type Options struct {
 	NoAutoRotate bool        `json:"noAutoRotate,omitempty"` // don't turn pages to suit the sheet
 	Rotate       map[int]int `json:"rotate,omitempty"`       // page -> clockwise degrees; overrides auto-rotate
 
+	// Photo layout (offered for images, works for any page).
+	Repeat int     `json:"repeat,omitempty"` // copies of each page side by side on one sheet: 2, 3, 4, 6, 8
+	Scale  int     `json:"scale,omitempty"`  // percent of the size Fit/Fill/Actual gives: 10-100 (0 = 100)
+	OffX   float64 `json:"offX,omitempty"`   // position in the free space: -1 left, 0 centre, 1 right
+	OffY   float64 `json:"offY,omitempty"`   // -1 top, 0 centre, 1 bottom
+
 	// Driver holds printer-specific choices by Caps.Options key (paper type,
 	// paper source, quality...). Each backend maps them to its own system.
 	Driver map[string]string `json:"driver,omitempty"`

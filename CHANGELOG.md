@@ -2,6 +2,12 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [0.3.0] - 2026-11-24
+
+### Added
+- **Photo layout** (images): image size from 10% to 100%, 1, 2, 3, 4, 6 or 8 copies on one sheet in an automatic grid, and drag the photo in the preview to move it (every copy moves the same way; Centre puts it back). Auto orientation picks the sheet that gives the biggest upright copies.
+- **More downloads:** .deb (Debian, Ubuntu, Raspberry Pi OS) and .rpm (Fedora, openSUSE) packages that install a systemd service, an AppImage, and a macOS app in a .dmg.
+
 ## [0.2.1] - 2026-11-24
 
 ### Changed

@@ -126,3 +126,68 @@ func TestSplitDuplexSheets(t *testing.T) {
 		}
 	}
 }
+
+func TestLayoutPhotoRepeat(t *testing.T) {
+	photo := sizes(map[int][2]float64{1: {6, 4}}) // landscape photo
+	for _, n := range []int{2, 3, 4, 6, 8} {
+		o := Options{Repeat: n}
+		orient := SheetOrientation(o, 6, 4)
+		w, h := areaW, areaH
+		if orient == Landscape {
+			w, h = h, w
+		}
+		sheets := Layout([]int{1}, photo, w, h, o)
+		if len(sheets) != 1 || len(sheets[0]) != n {
+			t.Fatalf("repeat %d: %d sheets, %d copies", n, len(sheets), len(sheets[0]))
+		}
+		for i, a := range sheets[0] {
+			if a.Page != 1 {
+				t.Errorf("repeat %d: slot %d has page %d", n, i, a.Page)
+			}
+			for _, b := range sheets[0][i+1:] {
+				if a.Rect.X < b.Rect.X+b.Rect.W-0.001 && b.Rect.X < a.Rect.X+a.Rect.W-0.001 &&
+					a.Rect.Y < b.Rect.Y+b.Rect.H-0.001 && b.Rect.Y < a.Rect.Y+a.Rect.H-0.001 {
+					t.Errorf("repeat %d: copies overlap", n)
+				}
+			}
+		}
+	}
+	// Three landscape photos stack best on a portrait sheet.
+	if got := SheetOrientation(Options{Repeat: 3}, 6, 4); got != Portrait {
+		t.Errorf("3 landscape copies: %q, want portrait", got)
+	}
+	// Copies stay upright: 4 landscape photos go on a landscape sheet.
+	o4 := Options{Repeat: 4}
+	if got := SheetOrientation(o4, 6, 4); got != Landscape {
+		t.Errorf("4 landscape copies: %q, want landscape", got)
+	}
+	for _, pl := range Layout([]int{1}, photo, areaH, areaW, o4)[0] {
+		if pl.Rotate != 0 {
+			t.Errorf("4 landscape copies turned %d", pl.Rotate)
+		}
+	}
+	// Each source page still takes one sheet.
+	if got := Sheets(3, Options{Repeat: 4}); got != 3 {
+		t.Errorf("Sheets with repeat = %d, want 3", got)
+	}
+}
+
+func TestLayoutScaleAndOffset(t *testing.T) {
+	size := sizes(nil)
+	full := Layout([]int{1}, size, areaW, areaH, Options{})[0][0]
+	half := Layout([]int{1}, size, areaW, areaH, Options{Scale: 50})[0][0]
+	if !near(half.Rect.W, full.Rect.W/2) || !near(half.Rect.H, full.Rect.H/2) {
+		t.Errorf("50%% scale: %+v vs %+v", half.Rect, full.Rect)
+	}
+	if !near(half.Rect.X+half.Rect.W/2, areaW/2) {
+		t.Errorf("not centred by default: %+v", half.Rect)
+	}
+	topLeft := Layout([]int{1}, size, areaW, areaH, Options{Scale: 50, OffX: -1, OffY: -1})[0][0]
+	if !near(topLeft.Rect.X, 0) || !near(topLeft.Rect.Y, 0) {
+		t.Errorf("offset -1,-1 should touch the top-left: %+v", topLeft.Rect)
+	}
+	bottomRight := Layout([]int{1}, size, areaW, areaH, Options{Scale: 50, OffX: 5, OffY: 1})[0][0]
+	if !near(bottomRight.Rect.X+bottomRight.Rect.W, areaW) || !near(bottomRight.Rect.Y+bottomRight.Rect.H, areaH) {
+		t.Errorf("offset 1,1 (clamped) should touch the bottom-right: %+v", bottomRight.Rect)
+	}
+}

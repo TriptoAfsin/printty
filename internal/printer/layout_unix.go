@@ -78,6 +78,11 @@ func layoutArgs(o Options) []string {
 	if n := PerSheet(o); n > 1 {
 		args = append(args, "-o", "number-up="+strconv.Itoa(n))
 	}
+	// CUPS scales images by percent of the page; copies on one sheet and
+	// dragging a photo aren't available through lp.
+	if o.Scale > 0 && o.Scale < 100 {
+		args = append(args, "-o", "scaling="+strconv.Itoa(o.Scale))
+	}
 	keys := make([]string, 0, len(o.Driver))
 	for k := range o.Driver {
 		keys = append(keys, k)

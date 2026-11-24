@@ -32,10 +32,14 @@ func grid(n int, wide bool) (cols, rows int) {
 	switch n {
 	case 2:
 		long, short = 2, 1
+	case 3:
+		long, short = 3, 1
 	case 4:
 		long, short = 2, 2
 	case 6:
 		long, short = 3, 2
+	case 8:
+		long, short = 4, 2
 	case 9:
 		long, short = 3, 3
 	}
@@ -54,12 +58,46 @@ func PerSheet(o Options) int {
 	return 1
 }
 
+// RepeatCount normalises the copies-on-one-sheet option (1 = off).
+func RepeatCount(o Options) int {
+	switch o.Repeat {
+	case 2, 3, 4, 6, 8:
+		return o.Repeat
+	}
+	return 1
+}
+
+// slots is how many places a sheet has: repeated copies or pages per sheet.
+func slots(o Options) int {
+	if r := RepeatCount(o); r > 1 {
+		return r
+	}
+	return PerSheet(o)
+}
+
+// SheetSize is how many different source pages go on one sheet.
+func SheetSize(o Options) int {
+	if RepeatCount(o) > 1 {
+		return 1
+	}
+	return PerSheet(o)
+}
+
+func clamp1(v float64) float64 { return math.Max(-1, math.Min(1, v)) }
+
 // SheetOrientation picks the paper orientation for a job. Auto: one page per
 // sheet stays portrait (pages are turned to fit instead); 2 or 6 per sheet
 // turns the sheet so the cells match the first page's shape.
 func SheetOrientation(o Options, firstW, firstH float64) Orientation {
 	if o.Orientation == Portrait || o.Orientation == Landscape {
 		return o.Orientation
+	}
+	if r := RepeatCount(o); r > 1 {
+		// Copies of one photo: whichever way makes each copy bigger.
+		if bestScale(r, firstW, firstH, true) > bestScale(r, firstW, firstH, false) {
+			return Landscape
+		}
+		return Portrait
 	}
 	n := PerSheet(o)
 	if n == 2 || n == 6 {
@@ -71,11 +109,35 @@ func SheetOrientation(o Options, firstW, firstH float64) Orientation {
 	return Portrait
 }
 
+// bestScale is how big an upright w×h page gets in an n-slot grid on an
+// A4-shaped sheet; used only to compare orientations.
+func bestScale(n int, w, h float64, wide bool) float64 {
+	sw, sh := 8.0, 11.4
+	if wide {
+		sw, sh = sh, sw
+	}
+	cols, rows := grid(n, wide)
+	cw := (sw - cellGap*float64(cols-1)) / float64(cols)
+	ch := (sh - cellGap*float64(rows-1)) / float64(rows)
+	// Upright: photos print the right way up when either way is close.
+	return math.Min(cw/w, ch/h)
+}
+
 // Layout places pages onto sheets. pages may contain 0 for an empty slot.
 // size returns a page's size in inches; areaW, areaH is the printable area of
 // the sheet in its final orientation.
 func Layout(pages []int, size func(page int) (w, h float64), areaW, areaH float64, o Options) []Sheet {
-	n := PerSheet(o)
+	n := slots(o)
+	if r := RepeatCount(o); r > 1 {
+		// Each page fills a whole sheet with r copies of itself.
+		var rep []int
+		for _, p := range pages {
+			for i := 0; i < r; i++ {
+				rep = append(rep, p)
+			}
+		}
+		pages = rep
+	}
 	cols, rows := grid(n, areaW > areaH)
 	gap := 0.0
 	if n > 1 {
@@ -110,10 +172,16 @@ func Layout(pages []int, size func(page int) (w, h float64), areaW, areaH float6
 			default:
 				scale = math.Min(cell.W/w, cell.H/h)
 			}
+			if o.Scale > 0 && o.Scale < 100 {
+				scale *= float64(max(o.Scale, 10)) / 100
+			}
 			dw, dh := w*scale, h*scale
+			// Offsets move the page within its free space (or pan it when
+			// it's bigger than its space); 0 is centred.
+			fx, fy := (1+clamp1(o.OffX))/2, (1+clamp1(o.OffY))/2
 			sh = append(sh, Placement{
 				Page: p, Rotate: rot, Cell: cell,
-				Rect: Rect{X: cell.X + (cell.W-dw)/2, Y: cell.Y + (cell.H-dh)/2, W: dw, H: dh},
+				Rect: Rect{X: cell.X + (cell.W-dw)*fx, Y: cell.Y + (cell.H-dh)*fy, W: dw, H: dh},
 			})
 		}
 		sheets = append(sheets, sh)
@@ -147,7 +215,7 @@ func NormRotation(r int) int {
 
 // Sheets is how many sheets (sides) n pages need.
 func Sheets(pages int, o Options) int {
-	n := PerSheet(o)
+	n := SheetSize(o)
 	return (pages + n - 1) / n
 }
 

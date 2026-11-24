@@ -22,6 +22,7 @@ Sharing a USB or home printer with phones is still awkward: enterprise tools (Pa
 - **Permission first.** Admin (you) prints directly and approves others. Members join by invite link and need approval unless you mark them trusted. Guests (off by default) type a name and always need approval; rate-limited per device.
 - **Incoming-request alerts** on Telegram with who, what, pages, colour and paper. With a dedicated bot, Approve/Reject work right inside Telegram.
 - **Print editor:** page previews and a live sheet preview; leave pages out or turn them; landscape pages turn to fill portrait paper by themselves.
+- **Photo layout:** image size, 1 to 8 copies on one sheet arranged automatically, and drag to reposition.
 - **Print options:** copies, one/two-sided, colour or black and white, paper size (A4 default), orientation, fit / fill / actual size, 1 to 9 pages per sheet. The layout engine (`internal/printer/layout.go`) is shared by every OS.
 - **Accounts:** change your own password; the owner makes one-time reset links.
 - **Editable Telegram messages** with emoji and placeholders.
@@ -39,8 +40,10 @@ Download from [Releases](https://github.com/TriptoAfsin/printty/releases/latest)
 | --- | --- | --- |
 | **Windows** | `Printty_<version>_x64_setup.exe` (`arm64` for Windows on Arm) | Installs Printty as a service that starts with Windows, adds the tray icon and a Start menu entry, allows it through the firewall on Private networks, and opens the setup page. One administrator prompt. Upgrades in place; your users and settings are kept. |
 | Windows, no install | `Printty_<version>_windows_x64_portable.zip` | Unzip, run `printty.exe`. Install the service later from **Settings**. |
-| Linux | `Printty_<version>_linux_amd64.tar.gz` (or `arm64`) | Unpack, then `sudo ./install.sh` (systemd; needs CUPS). Untested on hardware so far. |
-| macOS | `Printty_<version>_darwin_arm64.tar.gz` (or `amd64`) | Run `./printty`. Untested so far. |
+| Linux: Debian, Ubuntu, Raspberry Pi OS | `Printty_<version>_linux_amd64.deb` (or `arm64`) | `sudo apt install ./Printty_<version>_linux_amd64.deb`: a systemd service that starts at boot, plus the CUPS client. |
+| Linux: Fedora, openSUSE | `Printty_<version>_linux_amd64.rpm` (or `arm64`) | `sudo dnf install ./Printty_<version>_linux_amd64.rpm` |
+| Linux, any | `Printty_<version>_linux_x86_64.AppImage`, or the `.tar.gz` | The AppImage runs Printty while it's open; the archive has `install.sh` for systemd. |
+| macOS | `Printty_<version>_macos.dmg` | Drag Printty to Applications and open it; Printty runs while the app is open. Not yet tested on a Mac. |
 
 The builds aren't code-signed yet: if Windows SmartScreen says "Windows protected your PC", choose **More info › Run anyway**. Checksums are in `SHA256SUMS.txt`.
 
