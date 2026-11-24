@@ -26,5 +26,6 @@
     {{end}}
   </div>
   <p class="hint">Files are deleted after printing.</p>
+  {{if .V.SignedIn}}<form class="signout-foot" method="post" action="/logout"><button class="btn quiet" type="submit">Sign out</button></form>{{end}}
 </main>
 {{end}}

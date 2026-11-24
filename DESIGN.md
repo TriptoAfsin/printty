@@ -28,6 +28,11 @@ The locked system for Printty's web UI (client and admin). Every Hallmark run re
 ```
 Spacing, type scale (1.2), easings and durations come from the scaffold. `base.css` holds the Floor's base rules.
 
+## App icon and mascot
+- **Buddy** (chosen 2026-11-24): a cream printer with a face, blush cheeks and a page peeking out, on a Ribbon-teal rounded square with soft depth.
+- Files in `internal/web/static/`: `icon.svg` (master, rounded), `icon-maskable.svg` (full-bleed square for Android masks and iOS), PNGs at 192, 512, maskable 512 and `apple-touch-icon.png` (180). PNGs are rendered from the SVGs with headless Edge; re-render them when the SVG changes.
+- Buddy is also the mascot on sign-in, setup, invite, guest and offline screens (72px). Keep its face simple: two eyes with highlights, cheeks, a small smile.
+
 ## Mode switching
 - Default follows the OS (`prefers-color-scheme`). A sun/moon button in the top bar sets `data-mode` on `<html>` and stores it in `localStorage`; a 4-line inline script in `<head>` applies it before first paint (no flash).
 - PWA `theme_color` is set per mode with two `<meta name="theme-color" media="(prefers-color-scheme: …)">` tags.

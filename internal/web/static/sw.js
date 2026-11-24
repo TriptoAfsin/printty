@@ -1,8 +1,8 @@
 // Printty service worker: caches the app shell so the installed app opens
 // instantly and says plainly when the computer running Printty is off.
-const CACHE = "printty-v1";
+const CACHE = "printty-v2";
 const SHELL = ["/static/tokens.css", "/static/base.css", "/static/app.css", "/static/app.js", "/static/theme.js",
-  "/static/icon.svg", "/static/fonts/figtree.woff2", "/static/fonts/instrument-sans.woff2", "/static/offline.html"];
+  "/static/icon.svg", "/static/icon-192.png", "/static/fonts/figtree.woff2", "/static/fonts/instrument-sans.woff2", "/static/offline.html"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

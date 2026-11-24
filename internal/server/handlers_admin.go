@@ -2,11 +2,13 @@ package server
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/TriptoAfsin/printty/internal/auth"
+	"github.com/TriptoAfsin/printty/internal/netinfo"
 	"github.com/TriptoAfsin/printty/internal/printer"
 	"github.com/TriptoAfsin/printty/internal/store"
 )
@@ -43,10 +45,11 @@ type adminData struct {
 	Telegram bool
 	Links    bool // Telegram buttons are links because another program owns the bot
 	Settings store.Settings
+	URLs     []netinfo.Address
 }
 
 func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request, v viewer) {
-	d := adminData{Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork(), Settings: s.st.Settings()}
+	d := adminData{Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork(), Settings: s.st.Settings(), URLs: s.Addresses()}
 	for _, j := range s.st.Jobs(nil) {
 		switch {
 		case j.State == store.JobPending:
@@ -111,10 +114,21 @@ func (s *Server) getUsers(w http.ResponseWriter, r *http.Request, v viewer) {
 	s.render(w, r, "users", s.usersPage(r, v, ""))
 }
 
-func baseURL(r *http.Request) string {
+// baseURL is the address to put in links for other devices. When the admin
+// is on this PC (localhost), use the LAN address instead, so phones can open it.
+func (s *Server) baseURL(r *http.Request) string {
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
+	}
+	host, _, err := net.SplitHostPort(r.Host)
+	if err != nil {
+		host = r.Host
+	}
+	if ip := net.ParseIP(host); host == "localhost" || (ip != nil && ip.IsLoopback()) {
+		if p := netinfo.Primary(s.Addresses()); p != "" {
+			return p
+		}
 	}
 	return scheme + "://" + r.Host
 }
@@ -122,7 +136,7 @@ func baseURL(r *http.Request) string {
 func (s *Server) postInviteCreate(w http.ResponseWriter, r *http.Request, v viewer) {
 	tok := store.RandomToken(16)
 	s.st.AddInvite(store.Invite{TokenHash: auth.HashToken(tok), CreatedBy: v.User.ID, Note: r.FormValue("note"), Expires: time.Now().Add(7 * 24 * time.Hour)})
-	s.render(w, r, "users", s.usersPage(r, v, baseURL(r)+"/invite/"+tok))
+	s.render(w, r, "users", s.usersPage(r, v, s.baseURL(r)+"/invite/"+tok))
 }
 
 func (s *Server) postUserAction(w http.ResponseWriter, r *http.Request, v viewer) {

@@ -17,6 +17,7 @@ import (
 
 	"github.com/TriptoAfsin/printty/internal/config"
 	"github.com/TriptoAfsin/printty/internal/memtrim"
+	"github.com/TriptoAfsin/printty/internal/netinfo"
 	"github.com/TriptoAfsin/printty/internal/notify"
 	"github.com/TriptoAfsin/printty/internal/printer"
 	"github.com/TriptoAfsin/printty/internal/queue"
@@ -69,9 +70,14 @@ func run(cfg config.Config) error {
 		return err
 	}
 	tg := notify.NewTelegram(cfg.TelegramBot, cfg.TelegramIDs)
-	q := queue.New(st, be, tg, cfg.PublicURL)
 	secure := cfg.TLSCert != "" && cfg.TLSKey != ""
-	srv, err := server.New(st, q, be, tg, cfg.MaxUploadMB, secure)
+	addrs := netinfo.URLs(cfg.Addr, secure)
+	public := cfg.PublicURL
+	if public == "" {
+		public = netinfo.Primary(addrs) // links in Telegram alerts
+	}
+	q := queue.New(st, be, tg, public)
+	srv, err := server.New(st, q, be, tg, cfg.MaxUploadMB, secure, cfg.Addr)
 	if err != nil {
 		return err
 	}
@@ -108,6 +114,13 @@ func run(cfg config.Config) error {
 	}
 	local := scheme + "://" + net.JoinHostPort(host, port)
 	slog.Info("printty is running", "version", version, "url", local, "data", cfg.DataDir, "printer", q.Printer(ctx), "telegram", tg != nil)
+	if len(addrs) > 0 {
+		fmt.Println("\n  Open Printty on phones and other computers on this network:")
+		for _, a := range addrs {
+			fmt.Printf("    %-40s %s\n", a.URL, a.Label)
+		}
+		fmt.Println("  If they can't connect, allow printty.exe in Windows Firewall for Private networks.")
+	}
 	if code := srv.SetupCode(); code != "" {
 		fmt.Printf("\n  First run: open %s/setup and enter setup code %s\n\n", local, code)
 	}

@@ -3,6 +3,8 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"html/template"
@@ -20,6 +22,7 @@ import (
 
 	"github.com/TriptoAfsin/printty/internal/auth"
 	"github.com/TriptoAfsin/printty/internal/memtrim"
+	"github.com/TriptoAfsin/printty/internal/netinfo"
 	"github.com/TriptoAfsin/printty/internal/notify"
 	"github.com/TriptoAfsin/printty/internal/printer"
 	"github.com/TriptoAfsin/printty/internal/queue"
@@ -44,10 +47,11 @@ type Server struct {
 	pages   map[string]*template.Template
 	static  http.Handler
 	limiter *limiter
+	listen  string // listen address, for the "open on phones" URLs
 }
 
-func New(st *store.Store, q *queue.Queue, be printer.Backend, tg *notify.Telegram, maxUploadMB int, secure bool) (*Server, error) {
-	s := &Server{st: st, q: q, be: be, tg: tg, maxUp: int64(maxUploadMB) << 20, secure: secure, limiter: newLimiter()}
+func New(st *store.Store, q *queue.Queue, be printer.Backend, tg *notify.Telegram, maxUploadMB int, secure bool, listen string) (*Server, error) {
+	s := &Server{st: st, q: q, be: be, tg: tg, maxUp: int64(maxUploadMB) << 20, secure: secure, limiter: newLimiter(), listen: listen}
 	if st.UserCount() == 0 {
 		s.setup = strings.ToUpper(store.RandomToken(4))
 	}
@@ -59,12 +63,31 @@ func New(st *store.Store, q *queue.Queue, be printer.Backend, tg *notify.Telegra
 	return s, nil
 }
 
+// Addresses are the URLs other devices can use, worked out fresh each time
+// (the LAN IP can change when the router hands out a new one).
+func (s *Server) Addresses() []netinfo.Address { return netinfo.URLs(s.listen, s.secure) }
+
 // SetupCode is printed to the console on first run.
 func (s *Server) SetupCode() string { return s.setup }
+
+var assetVersion = func() string {
+	h := sha256.New()
+	fs.WalkDir(web.Static, "static", func(p string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			b, _ := fs.ReadFile(web.Static, p)
+			h.Write(b)
+		}
+		return nil
+	})
+	return hex.EncodeToString(h.Sum(nil))[:10]
+}()
 
 func (s *Server) parseTemplates() error {
 	s.pages = map[string]*template.Template{}
 	funcs := template.FuncMap{
+		// asset returns a static URL with a content fingerprint, so browsers
+		// pick up new CSS/JS right after an update despite long caching.
+		"asset": func(name string) string { return "/static/" + name + "?v=" + assetVersion },
 		"plural": func(n int, w string) string {
 			if n == 1 {
 				return "1 " + w

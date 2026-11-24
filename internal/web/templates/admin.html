@@ -3,6 +3,16 @@
   {{template "messages" .}}
   <div class="cols" data-live="5000">
     <div class="main">
+      {{range .Data.Active}}{{if eq .State "awaiting_flip"}}
+      <section class="card flip stack" role="alert">
+        <span class="fname">Flip needed: {{.FileName}}</span>
+        <span>The fronts are printed. Put the stack back in the tray{{if $.Data.Settings.FlipReverse}} without reordering it{{end}}, then continue.</span>
+        <div class="acts">
+          <form class="inline" method="post" action="/admin/jobs/{{.ID}}/continue"><button class="btn primary" type="submit">Continue</button></form>
+          <form class="inline" method="post" action="/admin/jobs/{{.ID}}/cancel"><button class="btn ghost" type="submit">Cancel job</button></form>
+        </div>
+      </section>
+      {{end}}{{end}}
       <section class="stack">
         <div>
           <h1 class="head">Requests</h1>
@@ -78,16 +88,21 @@
         </dl>
       </section>
 
-      {{range .Data.Active}}{{if eq .State "awaiting_flip"}}
-      <section class="card flip stack">
-        <span class="fname">Flip needed</span>
-        <span>{{.FileName}}: the fronts are printed. Put the stack back in the tray{{if $.Data.Settings.FlipReverse}} without reordering it{{end}}, then continue.</span>
-        <div class="acts">
-          <form class="inline" method="post" action="/admin/jobs/{{.ID}}/continue"><button class="btn primary" type="submit">Continue</button></form>
-          <form class="inline" method="post" action="/admin/jobs/{{.ID}}/cancel"><button class="btn ghost" type="submit">Cancel job</button></form>
+      <section class="card stack" aria-labelledby="share-title">
+        <span class="fname" id="share-title">Open on phones</span>
+        {{if and .Data.URLs (ne (index .Data.URLs 0).Kind "local")}}
+        <p class="small muted">On the same Wi-Fi, open one of these. The first usually works.</p>
+        {{range $i, $a := .Data.URLs}}
+        <div class="field">
+          <label class="label" for="url{{$i}}">{{$a.Label}}</label>
+          <div class="copy"><input class="input" id="url{{$i}}" value="{{$a.URL}}" readonly><button class="btn ghost" type="button" data-copy="url{{$i}}">Copy</button></div>
         </div>
+        {{end}}
+        <p class="hint">Nothing opens on the phone? Allow printty.exe in Windows Firewall for Private networks.</p>
+        {{else}}
+        <p class="small muted">Printty is only listening on this computer. Start it without <code>-addr 127.0.0.1</code> to reach it from phones.</p>
+        {{end}}
       </section>
-      {{end}}{{end}}
 
       <section class="card stack">
         <span class="small muted">Alerts</span>

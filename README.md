@@ -34,7 +34,13 @@ copy printty.env.example printty.env   # then fill in Telegram if you want alert
 
 1. The console prints a **setup code**. Open `http://localhost:8631/setup`, enter it, and create the owner account.
 2. In **Users**, press **Invite someone** and send the link.
-3. Phones on the same Wi-Fi open `http://<this PC's name or IP>:8631`. Allow port 8631 in Windows Firewall for private networks.
+3. Phones on the same Wi-Fi open the address Printty prints at startup, for example:
+   ```
+   Open Printty on phones and other computers on this network:
+     http://192.168.68.53:8631                Ethernet
+     http://my-pc.local:8631                  This PC's name (newer phones)
+   ```
+   The same list, with copy buttons, is on the admin **Requests** page under "Open on phones", and invite links and Telegram links use it automatically. The first time Printty runs, Windows asks whether to allow it on networks: allow **Private** networks.
 
 Printty picks the first real printer (not "Print to PDF" or OneNote) and remembers it; change it in **Settings**. It deliberately doesn't follow the Windows default printer, because Windows moves the default to whichever printer was used last.
 

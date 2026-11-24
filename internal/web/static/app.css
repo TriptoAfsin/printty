@@ -173,3 +173,12 @@ progress::-moz-progress-bar { background: var(--color-accent); border-radius: va
 .mascot { width: 72px; height: 72px; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+
+/* phones: keep the header on one line; sign out lives on the Queue page */
+@media (max-width: 560px) {
+  .topin { flex-wrap: nowrap; padding: 10px 16px; }
+  .topright .signout { display: none; }
+  .brand { font-size: 1.15rem; }
+}
+.signout-foot { display: none; }
+@media (max-width: 560px) { .signout-foot { display: flex; justify-content: center; } }
