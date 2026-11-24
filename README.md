@@ -1,4 +1,8 @@
-# Printty
+<p align="center">
+  <img src="internal/web/static/icon.svg" alt="Printty" width="128" height="128">
+</p>
+
+<h1 align="center">Printty</h1>
 
 A lean print server you leave running on one computer. Phones and laptops on the same network open a web page, upload a file, choose how it prints, and send it. Nothing prints until the owner approves it, every incoming request pings the owner on Telegram so the printer can be readied, and if the printer is off the job waits and prints by itself once it's back.
 
@@ -51,7 +55,7 @@ In **Settings › Start with Windows**:
 - **Install as a Windows service** (recommended): starts at boot before anyone signs in, restarts itself if it stops, and opens port 8631 for Private networks in Windows Firewall. Windows shows one permission prompt on the PC's screen; the running copy hands over to the service on the same address. **Remove the service** undoes all of it.
 - **Start when I sign in**: no admin needed; runs hidden (`-background`) while you're signed in.
 
-From a terminal: `printty service install -start`, `printty service uninstall`, `printty service status` (it asks for admin rights itself). The service runs as LocalSystem, reads `printty.env` next to `printty.exe` and in the data folder, and logs to `C:ProgramDataPrinttyprintty.log`. On first run without a console, the setup code is in `setup-code.txt` in the data folder. **Check printing works** in Settings renders a test page without printing, to confirm the PDF engine works in your setup.
+From a terminal: `printty service install -start`, `printty service uninstall`, `printty service status` (it asks for admin rights itself). The service runs as LocalSystem, reads `printty.env` next to `printty.exe` and in the data folder, and logs to `C:\ProgramData\Printty\printty.log`. On first run without a console, the setup code is in `setup-code.txt` in the data folder. **Check printing works** in Settings renders a test page without printing, to confirm the PDF engine works in your setup.
 
 ## Configuration
 
