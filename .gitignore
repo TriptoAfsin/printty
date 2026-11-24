@@ -1,0 +1,20 @@
+# Build output
+/printty
+/printty.exe
+/dist/
+*.exe
+*.test
+*.out
+
+# Local config and runtime data
+printty.toml
+/data/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Claude Code local settings
+.claude/settings.local.json
