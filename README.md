@@ -22,7 +22,7 @@ Sharing a USB or home printer with phones is still awkward: enterprise tools (Pa
 - **Permission first.** Admin (you) prints directly and approves others. Members join by invite link and need approval unless you mark them trusted. Guests (off by default) type a name and always need approval; rate-limited per device.
 - **Incoming-request alerts** on Telegram with who, what, pages, colour and paper. With a dedicated bot, Approve/Reject work right inside Telegram.
 - **Print editor:** page previews and a live sheet preview; leave pages out or turn them; landscape pages turn to fill portrait paper by themselves.
-- **Print options:** copies, one/two-sided, colour or black and white, paper size (A4 default), orientation, fit / fill / actual size, 1 to 9 pages per sheet, plus the printer's own options (paper type, source, quality) read from its driver. The layout engine (`internal/printer/layout.go`) is shared by every OS.
+- **Print options:** copies, one/two-sided, colour or black and white, paper size (A4 default), orientation, fit / fill / actual size, 1 to 9 pages per sheet. The layout engine (`internal/printer/layout.go`) is shared by every OS.
 - **Accounts:** change your own password; the owner makes one-time reset links.
 - **Editable Telegram messages** with emoji and placeholders.
 - **Manual duplex** for printers without a duplex unit (like the G1010): fronts print, Printty asks you to flip the stack, backs print.

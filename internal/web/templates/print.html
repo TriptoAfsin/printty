@@ -128,20 +128,6 @@
       </div>
     </fieldset>
 
-    {{if .Data.Caps.Options}}
-    <details class="more">
-      <summary>More printer options</summary>
-      <div class="stack">
-        {{range .Data.Caps.Options}}
-        <label class="field"><span class="label">{{.Label}}</span>
-          <select class="input" name="drv_{{.Key}}">
-            {{$def := .Default}}{{range .Choices}}<option value="{{.Value}}" {{if eq .Value $def}}selected{{end}}>{{.Label}}</option>{{end}}
-          </select>
-        </label>
-        {{end}}
-      </div>
-    </details>
-    {{end}}
 
     {{if not .V.AutoApprove}}
     <label class="field"><span class="label">Note for the owner <span class="muted">Optional</span></span><input class="input" name="note" maxlength="200" placeholder="For class tomorrow"></label>

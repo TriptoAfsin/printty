@@ -2,6 +2,11 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [0.2.1] - 2026-11-24
+
+### Changed
+- The print page no longer shows the printer's own options (paper type, quality): editing pages, turning them, orientation, fit and paper size cover what people need. Printers still print at their default settings.
+
 ## [0.2.0] - 2026-11-24
 
 ### Added
