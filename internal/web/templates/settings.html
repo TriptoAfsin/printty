@@ -43,10 +43,28 @@
         <div class="switchrow"><div><div class="fname">Notifications on this PC</div><div class="small muted">Windows notifications from the tray icon, next to Telegram. Click one to open Requests.</div></div><label class="switch"><input type="checkbox" name="desktop" {{if not .Data.Settings.DesktopOff}}checked{{end}} aria-label="Notifications on this PC"><span></span></label></div>
         <div class="switchrow"><div><div class="fname">Tell me about every print</div><div class="small muted">Also notify when people who print directly send something, so you can switch the printer on.</div></div><label class="switch"><input type="checkbox" name="notifyIncoming" {{if .Data.Settings.NotifyIncoming}}checked{{end}} aria-label="Tell me about every print"><span></span></label></div>
       </section>
+      <section class="card stack" id="messages">
+        <h2 class="head">Telegram messages</h2>
+        <p class="small muted">Change what Printty sends. Words in {braces} are filled in, and a line whose blanks are all empty is left out (so the note line disappears when there's no note). Clear a box to go back to the default.</p>
+        <div class="emoji-bar" role="toolbar" aria-label="Insert an emoji into the message you're editing"><button type="button" class="emoji" data-emoji="🖨️" aria-label="Insert 🖨️">🖨️</button><button type="button" class="emoji" data-emoji="📄" aria-label="Insert 📄">📄</button><button type="button" class="emoji" data-emoji="📑" aria-label="Insert 📑">📑</button><button type="button" class="emoji" data-emoji="✅" aria-label="Insert ✅">✅</button><button type="button" class="emoji" data-emoji="❌" aria-label="Insert ❌">❌</button><button type="button" class="emoji" data-emoji="⚠️" aria-label="Insert ⚠️">⚠️</button><button type="button" class="emoji" data-emoji="🔄" aria-label="Insert 🔄">🔄</button><button type="button" class="emoji" data-emoji="⏳" aria-label="Insert ⏳">⏳</button><button type="button" class="emoji" data-emoji="💬" aria-label="Insert 💬">💬</button><button type="button" class="emoji" data-emoji="👤" aria-label="Insert 👤">👤</button><button type="button" class="emoji" data-emoji="🙏" aria-label="Insert 🙏">🙏</button><button type="button" class="emoji" data-emoji="🎉" aria-label="Insert 🎉">🎉</button><button type="button" class="emoji" data-emoji="📌" aria-label="Insert 📌">📌</button><button type="button" class="emoji" data-emoji="🔔" aria-label="Insert 🔔">🔔</button><button type="button" class="emoji" data-emoji="☕" aria-label="Insert ☕">☕</button><button type="button" class="emoji" data-emoji="🖊️" aria-label="Insert 🖊️">🖊️</button></div>
+        {{range .Data.Templates}}
+        <div class="stack tpl-block">
+          <label class="field"><span class="label">{{.Label}}{{if .Custom}} <span class="tag">Edited</span>{{end}}</span>
+            <textarea class="input tpl" name="tpl_{{.Key}}" rows="5" maxlength="1000" data-tpl>{{.Text}}</textarea>
+          </label>
+          <div class="row between tpl-foot">
+            <span class="small muted">Blanks: {{range .Fields}}<code>{{"{"}}{{.}}{{"}"}}</code> {{end}}</span>
+            {{if $.Data.Telegram}}<button class="btn ghost sm" type="submit" form="sample-{{.Key}}">Send a sample</button>{{end}}
+          </div>
+        </div>
+        {{end}}
+        <p class="small muted">Samples use the saved text: save first to try your changes.</p>
+      </section>
       <button class="btn primary lg" type="submit">Save settings</button>
     </form>
     <aside class="side">
       <form id="selftest" method="post" action="/admin/selftest" hidden></form>
+      {{range .Data.Templates}}<form id="sample-{{.Key}}" method="post" action="/admin/test-alert" hidden><input type="hidden" name="template" value="{{.Key}}"></form>{{end}}
       {{with .Data.Startup}}{{if .Supported}}
       <section class="card stack" aria-labelledby="startup-title">
         <span class="fname" id="startup-title">Start with Windows</span>
@@ -68,6 +86,11 @@
         {{end}}
       </section>
       {{end}}{{end}}
+      <section class="card stack">
+        <span class="fname">Your account</span>
+        <p class="small muted">Signed in as {{.V.DisplayName}}. To let someone back in who forgot their password, use Reset password on the Users page.</p>
+        <a class="btn ghost" href="/account">Change your password</a>
+      </section>
       <section class="card stack">
         <div class="row between"><span class="fname">About</span><span class="tag">Printty {{.Data.Version}}</span></div>
         <p class="small muted">Version, how it's running, and where it keeps its files.</p>

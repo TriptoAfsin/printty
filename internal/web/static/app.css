@@ -249,3 +249,11 @@ details.more[open] summary { margin-bottom: 12px; }
 .seg label:has(input[value="9"]) { min-width: 0; }
 .check .hint { display: block; }
 .check-wrap { display: flex; flex-direction: column; gap: 2px; }
+
+/* Telegram message templates */
+.emoji-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-radius: var(--radius-control); background: var(--color-paper-2); position: sticky; top: 76px; z-index: 2; }
+.emoji { width: 36px; height: 36px; border: 0; border-radius: var(--radius-control-in); background: transparent; font-size: 1.15rem; cursor: pointer; }
+.emoji:hover { background: var(--color-raised); }
+textarea.tpl { font-family: var(--font-body); line-height: 1.5; min-height: 120px; }
+.tpl-foot code { font-size: .75rem; background: var(--color-paper-2); padding: 1px 5px; border-radius: 4px; }
+.tpl-block + .tpl-block { padding-top: 6px; border-top: 1px solid var(--color-rule); }

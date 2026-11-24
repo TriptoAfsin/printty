@@ -100,6 +100,21 @@
     }, every);
   }
 
+  // Emoji palette: inserts into the message box last used (Settings).
+  var lastTpl = null;
+  document.addEventListener("focusin", function (e) { if (e.target.matches && e.target.matches("[data-tpl]")) lastTpl = e.target; });
+  document.querySelectorAll("[data-emoji]").forEach(function (b) {
+    b.addEventListener("mousedown", function (e) { e.preventDefault(); }); // keep the caret where it is
+    b.addEventListener("click", function () {
+      var t = lastTpl || document.querySelector("[data-tpl]");
+      if (!t) return;
+      var s = t.selectionStart != null ? t.selectionStart : t.value.length, end = t.selectionEnd != null ? t.selectionEnd : s;
+      t.value = t.value.slice(0, s) + b.dataset.emoji + t.value.slice(end);
+      t.focus();
+      t.selectionStart = t.selectionEnd = s + b.dataset.emoji.length;
+    });
+  });
+
   // Copy buttons.
   document.querySelectorAll("[data-copy]").forEach(function (b) {
     b.addEventListener("click", function () {

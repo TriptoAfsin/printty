@@ -1,0 +1,23 @@
+{{define "content"}}
+<main class="auth">
+  <img class="mascot" src="{{asset "icon.svg"}}" alt="">
+  {{if .Data.Valid}}
+  <div>
+    <h1 class="head">Choose a new password</h1>
+    <p class="lead">Your old password stops working, and you're signed out on other devices.</p>
+  </div>
+  {{template "messages" .}}
+  <form class="stack" method="post" action="/reset/{{.Data.Token}}">
+    <label class="field"><span class="label">New password <span class="muted">8 characters or more</span></span><input class="input" type="password" name="password" autocomplete="new-password" minlength="8" required></label>
+    <label class="field"><span class="label">New password again</span><input class="input" type="password" name="password2" autocomplete="new-password" minlength="8" required></label>
+    <button class="btn primary lg" type="submit" data-busy="Saving…">Save and sign in</button>
+  </form>
+  {{else}}
+  <div>
+    <h1 class="head">This link has expired</h1>
+    <p class="lead">Reset links work once, for 24 hours. Ask the owner for a new one.</p>
+  </div>
+  <a class="btn ghost lg" href="/login">Sign in</a>
+  {{end}}
+</main>
+{{end}}

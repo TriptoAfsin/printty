@@ -17,6 +17,13 @@
         <div class="copy"><input class="input" id="invite" value="{{.Data.NewLink}}" readonly aria-label="Invite link"><button class="btn primary" type="button" data-copy="invite">Copy</button></div>
       </section>
       {{end}}
+      {{if .Data.ResetLink}}
+      <section class="card flip stack">
+        <span class="fname">Password reset link for {{.Data.ResetName}}</span>
+        <span class="small">Send this to them. It works once and lasts 24 hours. Their old password keeps working until they use it.</span>
+        <div class="copy"><input class="input" id="resetlink" value="{{.Data.ResetLink}}" readonly aria-label="Reset link"><button class="btn primary" type="button" data-copy="resetlink">Copy</button></div>
+      </section>
+      {{end}}
       <section class="card">
         <div class="tablebox">
           <table class="table">
@@ -30,8 +37,11 @@
               <td class="muted">{{if .LastPrint.IsZero}}Never{{else}}{{clock .LastPrint}}{{end}}</td>
               <td>{{.Sessions}}</td>
               <td>
-                {{if ne .Role "admin"}}
+                {{if eq .ID $.V.User.ID}}
+                <div class="acts end"><a class="btn ghost sm" href="/account">Change password</a></div>
+                {{else}}
                 <div class="acts end">
+                  <form class="inline" method="post" action="/admin/users/{{.ID}}/reset-link" data-confirm="Make a reset link for {{.Name}}?" data-confirm-detail="You get a link to send them. It lets them choose a new password, once, within 24 hours." data-confirm-ok="Make link"><button class="btn ghost sm" type="submit">Reset password</button></form>
                   {{if .Trusted}}<form class="inline" method="post" action="/admin/users/{{.ID}}/untrust"><button class="btn ghost sm" type="submit">Require approval</button></form>
                   {{else}}<form class="inline" method="post" action="/admin/users/{{.ID}}/trust"><button class="btn ghost sm" type="submit">Let them print directly</button></form>{{end}}
                   {{if .Disabled}}<form class="inline" method="post" action="/admin/users/{{.ID}}/enable"><button class="btn ghost sm" type="submit">Restore access</button></form>

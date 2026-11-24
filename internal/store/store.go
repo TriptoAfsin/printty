@@ -52,6 +52,8 @@ type Invite struct {
 	// NeedsApproval: the member's prints wait for the owner. Off by default:
 	// invited people print directly; guests always need approval.
 	NeedsApproval bool `json:"needsApproval,omitempty"`
+	// ResetFor makes this a password-reset link for that user, not an invite.
+	ResetFor string `json:"resetFor,omitempty"`
 }
 
 type JobState string
@@ -106,19 +108,21 @@ type Job struct {
 }
 
 type Settings struct {
-	Printer          string `json:"printer"`
-	GuestsEnabled    bool   `json:"guestsEnabled"`
-	GuestPerHour     int    `json:"guestPerHour"`
-	GuestMaxPages    int    `json:"guestMaxPages"`
-	MaxUploadMB      int    `json:"maxUploadMB"`
-	RequestTTLHours  int    `json:"requestTTLHours"`
-	FlipReverse      bool   `json:"flipReverse"`
-	AutoDuplex       bool   `json:"autoDuplex"` // printer has a duplex unit
-	NotifyTelegram   bool   `json:"notifyTelegram"`
-	NotifyIncoming   bool   `json:"notifyIncoming"`
-	DesktopOff       bool   `json:"desktopOff,omitempty"` // no Windows notifications on this PC
-	Clock12          bool   `json:"clock12,omitempty"`    // show times as 9:01 PM instead of 21:01
-	KeepHistoryHours int    `json:"keepHistoryHours"`
+	Printer         string `json:"printer"`
+	GuestsEnabled   bool   `json:"guestsEnabled"`
+	GuestPerHour    int    `json:"guestPerHour"`
+	GuestMaxPages   int    `json:"guestMaxPages"`
+	MaxUploadMB     int    `json:"maxUploadMB"`
+	RequestTTLHours int    `json:"requestTTLHours"`
+	FlipReverse     bool   `json:"flipReverse"`
+	AutoDuplex      bool   `json:"autoDuplex"` // printer has a duplex unit
+	NotifyTelegram  bool   `json:"notifyTelegram"`
+	NotifyIncoming  bool   `json:"notifyIncoming"`
+	DesktopOff      bool   `json:"desktopOff,omitempty"` // no Windows notifications on this PC
+	Clock12         bool   `json:"clock12,omitempty"`
+	// Templates are the owner's Telegram message texts by key; empty = default.
+	Templates        map[string]string `json:"templates,omitempty"` // show times as 9:01 PM instead of 21:01
+	KeepHistoryHours int               `json:"keepHistoryHours"`
 }
 
 func DefaultSettings() Settings {
@@ -366,7 +370,7 @@ func (st *Store) ValidInvite(tokenHash string) bool {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	for _, inv := range st.s.Invites {
-		if inv.TokenHash == tokenHash && inv.UsedBy == "" && time.Now().Before(inv.Expires) {
+		if inv.TokenHash == tokenHash && inv.ResetFor == "" && inv.UsedBy == "" && time.Now().Before(inv.Expires) {
 			return true
 		}
 	}
@@ -377,7 +381,7 @@ func (st *Store) UseInvite(tokenHash, userID string) (Invite, error) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	for _, inv := range st.s.Invites {
-		if inv.TokenHash == tokenHash && inv.UsedBy == "" && time.Now().Before(inv.Expires) {
+		if inv.TokenHash == tokenHash && inv.ResetFor == "" && inv.UsedBy == "" && time.Now().Before(inv.Expires) {
 			inv.UsedBy = userID
 			return *inv, st.saveLocked()
 		}
@@ -385,12 +389,51 @@ func (st *Store) UseInvite(tokenHash, userID string) (Invite, error) {
 	return Invite{}, ErrNotFound
 }
 
+// AddReset stores a password-reset link for userID, replacing older ones.
+func (st *Store) AddReset(tokenHash, userID, by string, ttl time.Duration) error {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	kept := st.s.Invites[:0]
+	for _, inv := range st.s.Invites {
+		if inv.ResetFor != userID || inv.UsedBy != "" {
+			kept = append(kept, inv)
+		}
+	}
+	st.s.Invites = append(kept, &Invite{TokenHash: tokenHash, CreatedBy: by, ResetFor: userID, Expires: time.Now().Add(ttl)})
+	return st.saveLocked()
+}
+
+// ResetUser returns the user a valid, unused reset link is for.
+func (st *Store) ResetUser(tokenHash string) (string, bool) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	for _, inv := range st.s.Invites {
+		if inv.TokenHash == tokenHash && inv.ResetFor != "" && inv.UsedBy == "" && time.Now().Before(inv.Expires) {
+			return inv.ResetFor, true
+		}
+	}
+	return "", false
+}
+
+// UseReset marks a reset link used.
+func (st *Store) UseReset(tokenHash string) error {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	for _, inv := range st.s.Invites {
+		if inv.TokenHash == tokenHash && inv.ResetFor != "" && inv.UsedBy == "" {
+			inv.UsedBy = inv.ResetFor
+			return st.saveLocked()
+		}
+	}
+	return ErrNotFound
+}
+
 func (st *Store) PendingInvites() []Invite {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	var out []Invite
 	for _, inv := range st.s.Invites {
-		if inv.UsedBy == "" && time.Now().Before(inv.Expires) {
+		if inv.ResetFor == "" && inv.UsedBy == "" && time.Now().Before(inv.Expires) {
 			out = append(out, *inv)
 		}
 	}

@@ -2,6 +2,18 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [0.2.0] - 2026-11-24
+
+### Added
+- **Print editor.** After choosing a file you see every page and a live preview of each sheet. Tap a page to leave it out, ↻ to turn it. Landscape pages are turned to fill portrait paper automatically.
+- Layout options: orientation (auto, portrait, landscape), size on paper (fit, fill, actual size), 1, 2, 4, 6 or 9 pages per sheet. Two-sided manual flips work with several pages per sheet.
+- **Printer options** read from the printer itself, under "More printer options": paper type (for example glossy photo paper), paper source and print quality on Windows; every driver option on Linux and macOS (CUPS).
+- **Passwords:** everyone can change their own password (Your account); the owner can make a one-time reset link for anyone who forgot theirs. Changing a password signs out other devices.
+- **Telegram messages are editable** in Settings, with an emoji palette, placeholders like {who} and {file}, and "Send a sample". New defaults use emoji, and the buttons read ✅ Approve and ❌ Reject.
+
+### Fixed
+- Messages after a redirect no longer get lost on pages with a #section in the address.
+
 ## [0.1.0] - 2026-11-24
 
 First release. Tested on Windows 11 with a Canon G1010.

@@ -511,14 +511,12 @@ func plural(n int, w string) string {
 }
 
 func (q *Queue) alertRequest(ctx context.Context, j store.Job) {
-	text := fmt.Sprintf("New print request from %s\n%s\n%s", who(j, q.st), j.FileName, describe(j))
-	if j.Note != "" {
-		text += "\nNote: \"" + j.Note + "\""
-	}
-	text += "\n\nApprove when the printer is on and has paper."
+	text := q.message("request", map[string]string{
+		"who": who(j, q.st), "file": j.FileName, "details": describe(j), "note": j.Note, "pages": fmt.Sprint(j.DocPages),
+	})
 	q.desktop("Print request from "+who(j, q.st), j.FileName+"\n"+describe(j))
 	q.send(ctx, text,
-		[]notify.Button{{Text: "Approve", Data: q.action("a", j.ID), URL: q.link("/admin")}, {Text: "Reject", Data: q.action("r", j.ID)}},
+		[]notify.Button{{Text: "✅ Approve", Data: q.action("a", j.ID), URL: q.link("/admin")}, {Text: "❌ Reject", Data: q.action("r", j.ID)}},
 	)
 }
 
@@ -527,7 +525,7 @@ func (q *Queue) alertIncoming(ctx context.Context, j store.Job) {
 		return
 	}
 	q.desktop("Printing for "+who(j, q.st), j.FileName+"\n"+describe(j)+"\nMake sure the printer is on and has paper.")
-	q.send(ctx, fmt.Sprintf("Printing now for %s\n%s\n%s\n\nMake sure the printer is on and has paper.", who(j, q.st), j.FileName, describe(j)))
+	q.send(ctx, q.message("printing", map[string]string{"who": who(j, q.st), "file": j.FileName, "details": describe(j), "pages": fmt.Sprint(j.DocPages)}))
 }
 
 func (q *Queue) alertOffline(ctx context.Context, why string) {
@@ -542,13 +540,13 @@ func (q *Queue) alertOffline(ctx context.Context, why string) {
 	}
 	n := len(q.st.Jobs(func(j store.Job) bool { return j.State == store.JobHeld || j.State == store.JobQueued }))
 	q.desktop("The printer seems to be off", plural(max(n, 1), "job")+" waiting. Switch it on and they print by themselves.")
-	q.send(ctx, fmt.Sprintf("The printer seems to be off.\n%s\n%s waiting. Please switch it on.", why, plural(max(n, 1), "job")))
+	q.send(ctx, q.message("offline", map[string]string{"reason": why, "waiting": plural(max(n, 1), "job")}))
 }
 
 func (q *Queue) alertFlip(ctx context.Context, j store.Job) {
 	q.desktop("Flip needed: "+j.FileName, "The fronts are printed. Put the stack back in the tray, then press Continue on the Requests page.")
-	q.send(ctx, fmt.Sprintf("Flip needed: %s\nThe front sides are printed. Put the stack back in the tray as calibrated, then continue.", j.FileName),
-		[]notify.Button{{Text: "Continue", Data: q.action("c", j.ID), URL: q.link("/admin")}, {Text: "Cancel", Data: q.action("x", j.ID)}},
+	q.send(ctx, q.message("flip", map[string]string{"file": j.FileName}),
+		[]notify.Button{{Text: "🔄 Continue", Data: q.action("c", j.ID), URL: q.link("/admin")}, {Text: "✖️ Cancel", Data: q.action("x", j.ID)}},
 	)
 }
 

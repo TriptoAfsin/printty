@@ -2,7 +2,7 @@
 <main class="wrap">
   <div>
     <h1 class="head">Your prints</h1>
-    <p class="lead small">{{if .V.SignedIn}}Signed in as {{.V.DisplayName}}.{{else}}Printing as {{.V.DisplayName}}, a guest.{{end}} Updates live.</p>
+    <p class="lead small">{{if .V.SignedIn}}Signed in as {{.V.DisplayName}} · <a href="/account">Change password</a>.{{else}}Printing as {{.V.DisplayName}}, a guest.{{end}} Updates live.</p>
   </div>
   {{template "messages" .}}
   <div class="jobs" data-live="4000">

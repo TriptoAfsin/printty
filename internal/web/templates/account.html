@@ -1,0 +1,17 @@
+{{define "content"}}
+<main class="wrap narrow">
+  {{template "messages" .}}
+  <h1 class="head">Your account</h1>
+  <p class="lead">Signed in as {{.V.DisplayName}}{{with .V.User}} ({{.Username}}){{end}}.</p>
+  <section class="card stack">
+    <h2 class="head">Change password</h2>
+    <form class="stack" method="post" action="/account">
+      <label class="field"><span class="label">Current password</span><input class="input" type="password" name="current" autocomplete="current-password" required></label>
+      <label class="field"><span class="label">New password <span class="muted">8 characters or more</span></span><input class="input" type="password" name="password" autocomplete="new-password" minlength="8" required></label>
+      <label class="field"><span class="label">New password again</span><input class="input" type="password" name="password2" autocomplete="new-password" minlength="8" required></label>
+      <button class="btn primary" type="submit" data-busy="Saving…">Change password</button>
+    </form>
+    <p class="small muted">Other devices are signed out afterwards.{{if not .V.IsAdmin}} Forgot it? Ask the owner for a reset link.{{end}}</p>
+  </section>
+</main>
+{{end}}

@@ -159,6 +159,10 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("POST /logout", s.postLogout)
 	m.HandleFunc("GET /invite/{token}", s.getInvite)
 	m.HandleFunc("POST /invite/{token}", s.postInvite)
+	m.HandleFunc("GET /reset/{token}", s.getReset)
+	m.HandleFunc("POST /reset/{token}", s.postReset)
+	m.HandleFunc("GET /account", s.getAccount)
+	m.HandleFunc("POST /account", s.postAccount)
 	m.HandleFunc("GET /guest", s.getGuest)
 	m.HandleFunc("POST /guest", s.postGuest)
 
@@ -176,6 +180,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("POST /admin/jobs/{id}/{action}", s.admin(s.postJobAction))
 	m.HandleFunc("GET /admin/users", s.admin(s.getUsers))
 	m.HandleFunc("POST /admin/invites", s.admin(s.postInviteCreate))
+	m.HandleFunc("POST /admin/users/{id}/reset-link", s.admin(s.postResetLink))
 	m.HandleFunc("POST /admin/users/{id}/{action}", s.admin(s.postUserAction))
 	m.HandleFunc("GET /admin/settings", s.admin(s.getSettings))
 	m.HandleFunc("GET /admin/about", s.admin(s.getAbout))
@@ -361,11 +366,17 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, p p
 
 func back(w http.ResponseWriter, r *http.Request, path, msg string) {
 	if msg != "" {
+		path, frag, _ := strings.Cut(path, "#")
 		sep := "?"
 		if strings.Contains(path, "?") {
 			sep = "&"
 		}
 		path += sep + "ok=" + url.QueryEscape(msg)
+		if frag != "" {
+			path += "#" + frag
+		}
+		http.Redirect(w, r, path, http.StatusSeeOther)
+		return
 	}
 	http.Redirect(w, r, path, http.StatusSeeOther)
 }

@@ -5,11 +5,13 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/TriptoAfsin/printty/internal/auth"
 	"github.com/TriptoAfsin/printty/internal/netinfo"
 	"github.com/TriptoAfsin/printty/internal/printer"
+	"github.com/TriptoAfsin/printty/internal/queue"
 	"github.com/TriptoAfsin/printty/internal/store"
 )
 
@@ -96,11 +98,12 @@ type userRow struct {
 }
 
 type usersData struct {
-	NewNeedsApproval bool
-	Users            []userRow
-	Invites          int
-	NewLink          string
-	Settings         store.Settings
+	ResetLink, ResetName string
+	NewNeedsApproval     bool
+	Users                []userRow
+	Invites              int
+	NewLink              string
+	Settings             store.Settings
 }
 
 func (s *Server) usersPage(r *http.Request, v viewer, link string) page {
@@ -179,19 +182,34 @@ func (s *Server) postUserAction(w http.ResponseWriter, r *http.Request, v viewer
 	back(w, r, "/admin/users", msg)
 }
 
+type tplView struct {
+	Key, Label, Text, Sample string
+	Fields                   []string
+	Custom                   bool
+}
+
 type settingsData struct {
-	Version  string
-	Settings store.Settings
-	Printers []printer.Info
-	Current  string
-	Telegram bool
-	Links    bool
-	Startup  startupData
+	Templates []tplView
+	Version   string
+	Settings  store.Settings
+	Printers  []printer.Info
+	Current   string
+	Telegram  bool
+	Links     bool
+	Startup   startupData
 }
 
 func (s *Server) getSettings(w http.ResponseWriter, r *http.Request, v viewer) {
 	ps, _ := s.be.Printers(r.Context())
 	d := settingsData{Settings: s.st.Settings(), Printers: ps, Current: s.q.Printer(r.Context()), Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork(), Startup: s.startup(), Version: s.rt.Version}
+	for _, t := range queue.Templates {
+		cur := d.Settings.Templates[t.Key]
+		tv := tplView{Key: t.Key, Label: t.Label, Fields: t.Fields, Text: cur, Custom: cur != "", Sample: s.q.SampleMessage(t.Key)}
+		if cur == "" {
+			tv.Text = t.Default
+		}
+		d.Templates = append(d.Templates, tv)
+	}
 	s.render(w, r, "settings", page{Title: "Settings", Nav: "settings", V: v, Data: d})
 }
 
@@ -203,7 +221,18 @@ func (s *Server) postSettings(w http.ResponseWriter, r *http.Request, v viewer) 
 		}
 		return min(max(n, lo), hi)
 	}
+	tpl := map[string]string{}
+	for _, t := range queue.Templates {
+		v := strings.TrimSpace(strings.ReplaceAll(r.FormValue("tpl_"+t.Key), "\r\n", "\n"))
+		if rs := []rune(v); len(rs) > 1000 {
+			v = string(rs[:1000])
+		}
+		if v != "" && v != t.Default {
+			tpl[t.Key] = v
+		}
+	}
 	s.st.UpdateSettings(func(x *store.Settings) {
+		x.Templates = tpl
 		x.Printer = r.FormValue("printer")
 		x.GuestsEnabled = r.FormValue("guests") == "on"
 		x.GuestPerHour = atoi("guestPerHour", x.GuestPerHour, 1, 50)
@@ -226,6 +255,15 @@ func (s *Server) postTestAlert(w http.ResponseWriter, r *http.Request, v viewer)
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
+	if key := r.FormValue("template"); key != "" && queue.DefaultTemplate(key) != "" {
+		// A sample of one message, as it looks with the current template.
+		if err := s.tg.Send(ctx, "🧪 Sample\n\n"+s.q.SampleMessage(key)); err != nil {
+			back(w, r, "/admin/settings", "Telegram said: "+err.Error())
+			return
+		}
+		back(w, r, "/admin/settings#messages", "Sample sent. Check Telegram.")
+		return
+	}
 	if err := s.tg.Test(ctx, v.User.Name); err != nil {
 		back(w, r, "/admin/settings", "Telegram said: "+err.Error())
 		return
