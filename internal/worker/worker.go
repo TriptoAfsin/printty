@@ -21,11 +21,13 @@ import (
 
 // Request is what the parent sends on the child's stdin.
 type Request struct {
-	Op      string      `json:"op"` // print, pages, caps
+	Op      string      `json:"op"` // print, pages, inspect, caps, selftest
 	Job     printer.Job `json:"job,omitempty"`
 	Path    string      `json:"path,omitempty"`
 	Kind    string      `json:"kind,omitempty"`
 	Printer string      `json:"printer,omitempty"`
+	Dir     string      `json:"dir,omitempty"` // inspect: where previews go
+	Max     int         `json:"max,omitempty"` // inspect: previews for at most this many pages
 }
 
 // Response is what the child writes on stdout.
@@ -53,6 +55,12 @@ func Serve(in io.Reader, out io.Writer) int {
 		err = be.Print(ctx, req.Job)
 	case "pages":
 		resp.Pages, err = be.PageCount(ctx, req.Path, req.Kind)
+	case "inspect":
+		if in, ok := be.(printer.Inspector); ok {
+			resp.Pages, err = in.Inspect(ctx, req.Path, req.Kind, req.Dir, req.Max)
+		} else {
+			resp.Pages, err = be.PageCount(ctx, req.Path, req.Kind)
+		}
 	case "selftest":
 		resp.Message, err = printer.SelfTest()
 	case "caps":
@@ -168,6 +176,12 @@ func (b *Backend) PageCount(ctx context.Context, path, kind string) (int, error)
 func (b *Backend) Print(ctx context.Context, job printer.Job) error {
 	_, err := b.call(ctx, Request{Op: "print", Job: job})
 	return err
+}
+
+// Inspect counts pages and writes previews in a child process.
+func (b *Backend) Inspect(ctx context.Context, path, kind, dir string, max int) (int, error) {
+	resp, err := b.call(ctx, Request{Op: "inspect", Path: path, Kind: kind, Dir: dir, Max: max})
+	return resp.Pages, err
 }
 
 // SelfTest checks the PDF engine in a child process, the same way a job runs.

@@ -164,6 +164,8 @@ func (s *Server) Handler() http.Handler {
 
 	m.HandleFunc("GET /{$}", s.getPrint)
 	m.HandleFunc("POST /print", s.postPrint)
+	m.HandleFunc("POST /upload", s.postUpload)
+	m.HandleFunc("GET /jobs/{id}/page/{n}", s.getPagePreview)
 	m.HandleFunc("POST /share", s.postShare)
 	m.HandleFunc("GET /queue", s.getQueue)
 	m.HandleFunc("POST /jobs/{id}/cancel", s.postCancel)
@@ -411,10 +413,17 @@ func (s *Server) saveUpload(ctx context.Context, src io.Reader, filename string)
 		os.Remove(path)
 		return store.Job{}, fmt.Errorf("That file is over %d MB", s.maxUp>>20)
 	}
-	pages, err := s.be.PageCount(ctx, path, kind)
+	var pages int
+	if in, ok := s.be.(printer.Inspector); ok {
+		// Count pages and draw the editor's previews in one worker run.
+		pages, err = in.Inspect(ctx, path, kind, s.st.PreviewDir(id), maxPreviews)
+	} else {
+		pages, err = s.be.PageCount(ctx, path, kind)
+	}
 	memtrim.Now()
 	if err != nil || pages < 1 {
 		os.Remove(path)
+		os.RemoveAll(s.st.PreviewDir(id))
 		return store.Job{}, fmt.Errorf("That PDF couldn't be opened. Is it password-protected or damaged?")
 	}
 	name := filepath.Base(strings.ReplaceAll(filename, "\\", "/"))

@@ -9,12 +9,24 @@ import (
 
 // TestPDF returns a minimal valid PDF with n A4 pages, each showing its number.
 func TestPDF(n int) []byte {
+	sizes := make([][2]int, n)
+	for i := range sizes {
+		sizes[i] = [2]int{595, 842}
+	}
+	return TestPDFSizes(sizes)
+}
+
+// TestPDFSizes returns a PDF with one page per size (in points), each showing
+// its number large, an arrow pointing up and a bar along its bottom edge, so
+// rotation and placement are easy to see in a printout.
+func TestPDFSizes(sizes [][2]int) []byte {
 	var b bytes.Buffer
 	var offsets []int
 	obj := func(s string) {
 		offsets = append(offsets, b.Len())
 		fmt.Fprintf(&b, "%d 0 obj\n%s\nendobj\n", len(offsets), s)
 	}
+	n := len(sizes)
 	b.WriteString("%PDF-1.4\n")
 	kids := ""
 	for i := 0; i < n; i++ {
@@ -23,9 +35,15 @@ func TestPDF(n int) []byte {
 	obj("<< /Type /Catalog /Pages 2 0 R >>")
 	obj(fmt.Sprintf("<< /Type /Pages /Kids [%s] /Count %d >>", kids, n))
 	obj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-	for i := 0; i < n; i++ {
-		obj(fmt.Sprintf("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents %d 0 R >>", 5+i*2))
-		content := fmt.Sprintf("BT /F1 96 Tf 200 400 Td (%d) Tj ET 0.17 0.48 0.46 rg 40 40 515 30 re f", i+1)
+	for i, sz := range sizes {
+		w, h := sz[0], sz[1]
+		obj(fmt.Sprintf("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Resources << /Font << /F1 3 0 R >> >> /Contents %d 0 R >>", w, h, 5+i*2))
+		cx, cy := w/2, h/2
+		content := fmt.Sprintf("0.85 0.88 0.9 rg 20 20 %d %d re f "+ // page tint
+			"0.17 0.48 0.46 rg 20 20 %d 30 re f "+ // bottom bar
+			"0 0 0 rg BT /F1 120 Tf %d %d Td (%d) Tj ET "+ // number
+			"0.8 0.2 0.2 rg %d %d m %d %d l %d %d l f", // arrow pointing up
+			w-40, h-40, w-40, cx-35, cy-60, i+1, cx-30, h-140, cx+30, h-140, cx, h-60)
 		obj(fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(content), content))
 	}
 	xref := b.Len()

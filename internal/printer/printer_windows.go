@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"image"
-	"image/color"
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
@@ -302,6 +301,7 @@ func capsFor(name string) Caps {
 	if len(c.Papers) == 0 {
 		c.Papers = []string{"A4", "Letter"}
 	}
+	c.Options = driverOptions(name)
 	return c
 }
 
@@ -459,7 +459,7 @@ func (w *Windows) PageCount(ctx context.Context, path, kind string) (int, error)
 }
 
 // devmodeFor returns a DEVMODE for the printer with the job's options merged in.
-func devmodeFor(h windows.Handle, name string, o Options) ([]byte, error) {
+func devmodeFor(h windows.Handle, name string, o Options, orient Orientation) ([]byte, error) {
 	pname := utf16(name)
 	size, _, _ := procDocumentPropertiesW.Call(0, uintptr(h), uintptr(unsafe.Pointer(pname)), 0, 0, 0)
 	if int32(size) <= 0 {
@@ -493,6 +493,7 @@ func devmodeFor(h windows.Handle, name string, o Options) ([]byte, error) {
 		dm.Fields |= dmFieldPaperSize
 		dm.PaperSize = id
 	}
+	applyLayoutAndDriver(dm, orient, o)
 	r, _, _ = procDocumentPropertiesW.Call(0, uintptr(h), uintptr(unsafe.Pointer(pname)), uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&buf[0])), dmInBuffer|dmOutBuffer)
 	if int32(r) < 0 {
 		return nil, fmt.Errorf("DocumentProperties merge failed")
@@ -534,11 +535,22 @@ func (w *Windows) printLocked(ctx context.Context, job Job) error {
 		}
 	}
 
+	// The sheet orientation follows the first page (see layout.go).
+	first := 1
+	for _, p := range pages {
+		if p > 0 {
+			first = p
+			break
+		}
+	}
+	fw, fh := src.size(first - 1)
+	orient := SheetOrientation(job.Options, fw, fh)
+
 	h, err := openPrinter(job.Printer)
 	if err != nil {
 		return err
 	}
-	dm, err := devmodeFor(h, job.Printer, job.Options)
+	dm, err := devmodeFor(h, job.Printer, job.Options, orient)
 	closePrinter(h)
 	if err != nil {
 		return err
@@ -574,17 +586,23 @@ func (w *Windows) printLocked(ctx context.Context, job Job) error {
 		}
 	}()
 
+	areaW, areaH := float64(horz)/float64(dpiX), float64(vert)/float64(dpiY)
+	sheets := Layout(pages, func(p int) (float64, float64) { return src.size(p - 1) }, areaW, areaH, job.Options)
+	maxDPI := float64(renderDPI)
+	if job.Options.Driver["quality"] == "draft" {
+		maxDPI = 150
+	}
 	copies := job.Options.Copies
 	if copies < 1 {
 		copies = 1
 	}
 	for c := 0; c < copies; c++ {
-		for _, p := range pages {
+		for _, sh := range sheets {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			if err := drawPage(hdc, src, p-1, horz, vert, dpiX, dpiY); err != nil {
-				return fmt.Errorf("page %d: %w", p, err)
+			if err := drawSheet(hdc, src, sh, dpiX, dpiY, maxDPI); err != nil {
+				return err
 			}
 		}
 	}
@@ -593,46 +611,6 @@ func (w *Windows) printLocked(ctx context.Context, job Job) error {
 	}
 	ok = true
 	w.spooled[job.ID] = &spoolTrack{since: time.Now(), lastProgress: time.Now()}
-	return nil
-}
-
-// drawPage renders one page fitted inside the printable area, centred.
-func drawPage(hdc uintptr, src *pageSource, index, horz, vert, dpiX, dpiY int) error {
-	wIn, hIn := src.size(index)
-	// Fit the page into the printable area, keeping its aspect ratio.
-	areaWIn, areaHIn := float64(horz)/float64(dpiX), float64(vert)/float64(dpiY)
-	scale := min(areaWIn/wIn, areaHIn/hIn)
-	destW, destH := int(wIn*scale*float64(dpiX)), int(hIn*scale*float64(dpiY))
-	offX, offY := (horz-destW)/2, (vert-destH)/2
-
-	// Render at most renderDPI; GDI scales up to the device.
-	rdpi := min(float64(dpiX), renderDPI)
-	rw, rh := int(wIn*scale*rdpi), int(hIn*scale*rdpi)
-	img, err := src.draw(index, rw, rh)
-	if err != nil {
-		return err
-	}
-	b := img.Bounds()
-	if r, _, _ := procStartPage.Call(hdc); int32(r) <= 0 {
-		return fmt.Errorf("StartPage failed")
-	}
-	// Send in bands of rows to keep each GDI call and buffer small.
-	band := make([]byte, b.Dx()*4*bandRows)
-	for y0 := b.Min.Y; y0 < b.Max.Y; y0 += bandRows {
-		rows := min(bandRows, b.Max.Y-y0)
-		fillBGRA(band, img, y0, rows)
-		bih := bitmapInfoHeader{Width: int32(b.Dx()), Height: -int32(rows), Planes: 1, BitCount: 32}
-		bih.Size = uint32(unsafe.Sizeof(bih))
-		dy0 := offY + (y0-b.Min.Y)*destH/b.Dy()
-		dy1 := offY + (y0-b.Min.Y+rows)*destH/b.Dy()
-		procStretchDIBits.Call(hdc,
-			uintptr(offX), uintptr(dy0), uintptr(destW), uintptr(dy1-dy0),
-			0, 0, uintptr(b.Dx()), uintptr(rows),
-			uintptr(unsafe.Pointer(&band[0])), uintptr(unsafe.Pointer(&bih)), dibRGBColors, srcCopy)
-	}
-	if r, _, _ := procEndPage.Call(hdc); int32(r) <= 0 {
-		return fmt.Errorf("EndPage failed")
-	}
 	return nil
 }
 
@@ -683,11 +661,6 @@ func openSource(job Job) (*pageSource, error) {
 			return nil, fmt.Errorf("decode image: %w", err)
 		}
 		b := img.Bounds()
-		// Photos fill the page; landscape photos are rotated to portrait.
-		if b.Dx() > b.Dy() {
-			img = rotate90(img)
-			b = img.Bounds()
-		}
 		return &pageSource{
 			count: 1,
 			size:  func(int) (float64, float64) { return float64(b.Dx()) / 300, float64(b.Dy()) / 300 },
@@ -696,17 +669,6 @@ func openSource(job Job) (*pageSource, error) {
 		}, nil
 	}
 	return nil, ErrUnsupported
-}
-
-func rotate90(src image.Image) image.Image {
-	b := src.Bounds()
-	dst := image.NewNRGBA(image.Rect(0, 0, b.Dy(), b.Dx()))
-	for y := b.Min.Y; y < b.Max.Y; y++ {
-		for x := b.Min.X; x < b.Max.X; x++ {
-			dst.Set(b.Max.Y-1-y, x-b.Min.X, color.NRGBAModel.Convert(src.At(x, y)))
-		}
-	}
-	return dst
 }
 
 func selfTest(path string) (string, error) {

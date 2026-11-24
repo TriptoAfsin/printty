@@ -23,7 +23,36 @@ type Options struct {
 	Duplex Duplex `json:"duplex"`
 	Color  bool   `json:"color"`
 	Paper  string `json:"paper"` // "A4", "Letter", "4x6"
+
+	// Layout, applied the same way on every OS (see layout.go).
+	Orientation  Orientation `json:"orientation,omitempty"`  // "" = auto
+	Fit          Fit         `json:"fit,omitempty"`          // "" = fit the page
+	PerSheet     int         `json:"perSheet,omitempty"`     // pages per sheet: 1 (or 0), 2, 4, 6, 9
+	NoAutoRotate bool        `json:"noAutoRotate,omitempty"` // don't turn pages to suit the sheet
+	Rotate       map[int]int `json:"rotate,omitempty"`       // page -> clockwise degrees; overrides auto-rotate
+
+	// Driver holds printer-specific choices by Caps.Options key (paper type,
+	// paper source, quality...). Each backend maps them to its own system.
+	Driver map[string]string `json:"driver,omitempty"`
 }
+
+// Orientation of the sheet.
+type Orientation string
+
+const (
+	AutoOrientation Orientation = ""
+	Portrait        Orientation = "portrait"
+	Landscape       Orientation = "landscape"
+)
+
+// Fit is how a page is scaled into its space on the sheet.
+type Fit string
+
+const (
+	FitPage Fit = ""       // whole page visible, as large as fits
+	Fill    Fit = "fill"   // cover the space, trimming edges (photos)
+	Actual  Fit = "actual" // 100%, centred, trimmed if larger
+)
 
 // Caps describes what a printer can do.
 type Caps struct {
@@ -31,6 +60,33 @@ type Caps struct {
 	AutoDuplex   bool     `json:"autoDuplex"`   // a duplex unit; false means manual flip
 	Papers       []string `json:"papers"`       // paper names the UI offers
 	DefaultPaper string   `json:"defaultPaper"` // what Printty preselects
+	// Options are the printer's own extra settings, read from its driver
+	// (Windows) or its PPD options (CUPS). The UI shows them generically.
+	Options []DriverOption `json:"options,omitempty"`
+}
+
+// DriverOption is one printer-specific setting, such as paper type.
+type DriverOption struct {
+	Key     string   `json:"key"`   // "media", "source", "quality", or a CUPS option name
+	Label   string   `json:"label"` // shown in the UI
+	Default string   `json:"default"`
+	Choices []Choice `json:"choices"`
+}
+
+// Choice is one value of a DriverOption.
+type Choice struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+// Valid reports whether value is one of the option's choices.
+func (o DriverOption) Valid(value string) bool {
+	for _, c := range o.Choices {
+		if c.Value == value {
+			return true
+		}
+	}
+	return false
 }
 
 // Info is one installed printer.
@@ -61,13 +117,15 @@ type Status struct {
 
 // Job is what the queue hands the backend.
 type Job struct {
-	ID       string
-	Title    string // document name shown in the OS spooler
-	Path     string // file on disk
-	Kind     string // "pdf", "png", "jpeg"
-	Printer  string
-	Options  Options
-	PageList []int // explicit 1-based pages to print, in order (used for manual duplex)
+	ID      string
+	Title   string // document name shown in the OS spooler
+	Path    string // file on disk
+	Kind    string // "pdf", "png", "jpeg"
+	Printer string
+	Options Options
+	// PageList is the explicit 1-based pages to print, in order (manual
+	// duplex). 0 is an empty slot, so sheets keep their grouping.
+	PageList []int
 }
 
 // SpoolState is what happened to a job after it left Printty.
@@ -88,6 +146,12 @@ type Backend interface {
 	Print(ctx context.Context, job Job) error
 	// Spool reports where a previously printed job is in the OS queue.
 	Spool(ctx context.Context, printer, jobID string) (SpoolState, error)
+}
+
+// Inspector is an optional Backend feature: count the pages and write small
+// preview images (dir/1.png, dir/2.png...) for the first max pages.
+type Inspector interface {
+	Inspect(ctx context.Context, path, kind, dir string, max int) (pages int, err error)
 }
 
 // ErrUnsupported is returned for file kinds a backend can't print.

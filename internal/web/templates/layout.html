@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="{{asset "base.css"}}">
 <link rel="stylesheet" href="{{asset "app.css"}}">
 <script src="{{asset "app.js"}}" defer></script>
+{{if eq .Nav "print"}}<script src="{{asset "editor.js"}}" defer></script>{{end}}
 </head>
 <body>
 {{if .Nav}}

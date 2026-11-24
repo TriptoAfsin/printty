@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -246,6 +247,7 @@ func (q *Queue) Cancel(id string) (store.Job, error) {
 func (q *Queue) removeFile(j store.Job) {
 	if j.StoredAs != "" && (j.State.Finished()) {
 		os.Remove(q.st.FilePath(j))
+		os.RemoveAll(q.st.PreviewDir(j.ID))
 	}
 }
 
@@ -334,9 +336,9 @@ func (q *Queue) print(ctx context.Context, j store.Job, set store.Settings) {
 	}
 	pass := pages
 	phase := 0
-	manual := (j.Options.Duplex == printer.LongEdge || j.Options.Duplex == printer.ShortEdge) && !set.AutoDuplex && len(pages) > 1
+	manual := (j.Options.Duplex == printer.LongEdge || j.Options.Duplex == printer.ShortEdge) && !set.AutoDuplex && printer.Sheets(len(pages), j.Options) > 1
 	if manual {
-		fronts, backs := printer.SplitDuplex(pages, set.FlipReverse)
+		fronts, backs := printer.SplitDuplexSheets(pages, printer.PerSheet(j.Options), set.FlipReverse)
 		if j.Phase == 2 {
 			pass, phase = backs, 2
 		} else {
@@ -348,7 +350,7 @@ func (q *Queue) print(ctx context.Context, j store.Job, set store.Settings) {
 		opts.Duplex = printer.Simplex
 	}
 	j, _ = q.st.UpdateJob(j.ID, func(x *store.Job) bool {
-		x.State, x.Phase, x.Reason, x.Total = store.JobPrinting, phase, "", len(pass)*max(opts.Copies, 1)
+		x.State, x.Phase, x.Reason, x.Total = store.JobPrinting, phase, "", printer.Sheets(len(pass), opts)*max(opts.Copies, 1)
 		return true
 	})
 	err = q.be.Print(ctx, printer.Job{
@@ -438,6 +440,7 @@ func (q *Queue) expire() {
 	}
 	for _, f := range q.st.Prune(time.Duration(max(set.KeepHistoryHours, 1)) * time.Hour) {
 		os.Remove(q.st.FilesDir() + string(os.PathSeparator) + f)
+		os.RemoveAll(q.st.PreviewDir(strings.TrimSuffix(f, filepath.Ext(f))))
 	}
 }
 

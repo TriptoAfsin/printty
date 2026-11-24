@@ -5,17 +5,38 @@
     {{if .Data.Guest}}<p class="lead">Printing as {{.V.DisplayName}}, a guest. The owner approves each request.</p>{{end}}
   </div>
   {{template "messages" .}}
-  <form class="stack" method="post" action="/print" enctype="multipart/form-data">
+  <form class="stack" method="post" action="/print" enctype="multipart/form-data" {{if not .Data.Draft}}data-upload="/upload"{{end}}>
     {{if .Data.Draft}}
     <input type="hidden" name="draft" value="{{.Data.Draft.ID}}">
     <div class="drop">
-      <span class="thumb" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      {{if .Data.Previews}}<img class="thumb-img" src="/jobs/{{.Data.Draft.ID}}/page/1" alt="">{{else}}<span class="thumb" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{{end}}
       <div class="grow">
         <div class="fname">{{.Data.Draft.FileName}}</div>
         <div class="small muted">{{plural .Data.Draft.DocPages "page"}}</div>
       </div>
       <a class="small" href="/">Change</a>
     </div>
+
+    <section class="card stack editor" data-editor data-job="{{.Data.Draft.ID}}">
+      <div class="row between"><span class="fname">Preview</span><span class="small muted" data-sheet-count></span></div>
+      <div class="sheets" data-sheets aria-live="polite"></div>
+    </section>
+
+    <section class="card stack">
+      <div class="row between"><span class="fname">Pages</span><span class="small muted">Tap a page to leave it out. ↻ turns it.</span></div>
+      <div class="pagestrip" data-pagestrip>
+        {{$id := .Data.Draft.ID}}{{$prev := .Data.Previews}}
+        {{range .Data.Pages}}
+        <div class="pg" data-page="{{.}}">
+          <button type="button" class="pg-img" data-toggle aria-pressed="true" aria-label="Page {{.}}: included. Tap to leave out">
+            {{if le . (len $prev)}}<img src="/jobs/{{$id}}/page/{{.}}" alt="">{{else}}<span class="pg-blank">{{.}}</span>{{end}}
+          </button>
+          <div class="pg-foot"><span>{{.}}</span><button type="button" class="pg-rot" data-rotate aria-label="Turn page {{.}} a quarter turn">↻</button></div>
+        </div>
+        {{end}}
+      </div>
+      <input type="hidden" name="rotate" value="">
+    </section>
     {{else}}
     <label class="drop">
       <span class="thumb" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
@@ -37,7 +58,7 @@
           <button type="button" data-step="1" aria-controls="copies" aria-label="One more copy">+</button>
         </div>
       </div>
-      <fieldset class="field">
+      <fieldset class="field" {{if .Data.Draft}}data-range-ui{{end}}>
         <legend>Pages</legend>
         <div class="seg">
           <label><input type="radio" name="pagemode" value="all" checked>All</label>
@@ -46,6 +67,41 @@
       </fieldset>
     </div>
     <label class="field range-input"><span class="label">Which pages <span class="muted">e.g. 1-3, 5</span></span><input class="input" name="pages" inputmode="numeric" placeholder="1-3, 5"></label>
+
+    <fieldset class="field">
+      <legend>Orientation</legend>
+      <div class="seg">
+        <label><input type="radio" name="orientation" value="" checked>Auto</label>
+        <label><input type="radio" name="orientation" value="portrait">Portrait</label>
+        <label><input type="radio" name="orientation" value="landscape">Landscape</label>
+      </div>
+    </fieldset>
+
+    <fieldset class="field">
+      <legend>Size on paper</legend>
+      <div class="seg">
+        <label><input type="radio" name="fit" value="" checked>Fit</label>
+        <label><input type="radio" name="fit" value="fill">Fill</label>
+        <label><input type="radio" name="fit" value="actual">Actual size</label>
+      </div>
+    </fieldset>
+
+    <fieldset class="field">
+      <legend>Pages per sheet</legend>
+      <div class="seg">
+        <label><input type="radio" name="persheet" value="1" checked>1</label>
+        <label><input type="radio" name="persheet" value="2">2</label>
+        <label><input type="radio" name="persheet" value="4">4</label>
+        <label><input type="radio" name="persheet" value="6">6</label>
+        <label><input type="radio" name="persheet" value="9">9</label>
+      </div>
+    </fieldset>
+
+    <input type="hidden" name="autorotate-shown" value="1">
+    <div class="check-wrap">
+      <label class="check"><input type="checkbox" name="autorotate" checked> Turn pages to fit the paper</label>
+      <span class="small muted">A landscape page fills a portrait sheet instead of printing small. ↻ on a page overrides it.</span>
+    </div>
 
     <fieldset class="field">
       <legend>Sides {{if not .Data.Caps.AutoDuplex}}<span class="muted">Two-sided is a manual flip</span>{{end}}</legend>
@@ -71,6 +127,21 @@
         {{range .Data.Papers}}<label><input type="radio" name="paper" value="{{.}}" {{if eq . "A4"}}checked{{end}}>{{if eq . "4x6"}}4×6{{else if eq . "5x7"}}5×7{{else}}{{.}}{{end}}</label>{{end}}
       </div>
     </fieldset>
+
+    {{if .Data.Caps.Options}}
+    <details class="more">
+      <summary>More printer options</summary>
+      <div class="stack">
+        {{range .Data.Caps.Options}}
+        <label class="field"><span class="label">{{.Label}}</span>
+          <select class="input" name="drv_{{.Key}}">
+            {{$def := .Default}}{{range .Choices}}<option value="{{.Value}}" {{if eq .Value $def}}selected{{end}}>{{.Label}}</option>{{end}}
+          </select>
+        </label>
+        {{end}}
+      </div>
+    </details>
+    {{end}}
 
     {{if not .V.AutoApprove}}
     <label class="field"><span class="label">Note for the owner <span class="muted">Optional</span></span><input class="input" name="note" maxlength="200" placeholder="For class tomorrow"></label>

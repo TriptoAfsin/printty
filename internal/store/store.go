@@ -173,6 +173,11 @@ func (st *Store) FilesDir() string { return filepath.Join(st.dir, "files") }
 
 func (st *Store) FilePath(j Job) string { return filepath.Join(st.FilesDir(), j.StoredAs) }
 
+// PreviewDir holds a job's page previews (1.png, 2.png...).
+func (st *Store) PreviewDir(jobID string) string {
+	return filepath.Join(st.FilesDir(), jobID+".pages")
+}
+
 func (st *Store) saveLocked() error {
 	b, err := json.MarshalIndent(&st.s, "", " ")
 	if err != nil {

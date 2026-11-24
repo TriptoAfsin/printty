@@ -42,7 +42,8 @@ func (CUPS) Printers(ctx context.Context) ([]Info, error) {
 	}
 	var ps []Info
 	for _, name := range strings.Fields(out) {
-		ps = append(ps, Info{Name: name, Default: name == def, Caps: Caps{Color: true, Papers: []string{"A4", "Letter", "4x6", "5x7", "A5", "Legal"}, DefaultPaper: "A4"}})
+		ps = append(ps, Info{Name: name, Default: name == def, Caps: Caps{Color: true, Papers: []string{"A4", "Letter", "4x6", "5x7", "A5", "Legal"}, DefaultPaper: "A4",
+			Options: driverOptions(ctx, name)}})
 	}
 	return ps, nil
 }
@@ -99,9 +100,11 @@ func (CUPS) Print(ctx context.Context, job Job) error {
 	args = append(args, "-n", strconv.Itoa(copies))
 	pages := job.Options.Pages
 	if len(job.PageList) > 0 {
-		s := make([]string, len(job.PageList))
-		for i, p := range job.PageList {
-			s[i] = strconv.Itoa(p)
+		var s []string
+		for _, p := range job.PageList {
+			if p > 0 { // CUPS can't leave a slot empty; number-up regroups
+				s = append(s, strconv.Itoa(p))
+			}
 		}
 		pages = strings.Join(s, ",")
 	}
@@ -126,6 +129,7 @@ func (CUPS) Print(ctx context.Context, job Job) error {
 	if m := cupsMedia(job.Options.Paper); m != "" {
 		args = append(args, "-o", "media="+m)
 	}
+	args = append(args, layoutArgs(job.Options)...)
 	args = append(args, job.Path)
 	_, err := run(ctx, "lp", args...)
 	return err
