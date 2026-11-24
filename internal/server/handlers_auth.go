@@ -4,6 +4,8 @@ import (
 	"crypto/subtle"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -59,6 +61,7 @@ func (s *Server) postSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setup = ""
+	os.Remove(filepath.Join(s.rt.DataDir, "setup-code.txt"))
 	s.startSession(w, u)
 	back(w, r, "/admin", "You're set up. Invite people from Users.")
 }

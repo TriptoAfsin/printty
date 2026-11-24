@@ -48,6 +48,7 @@ type Server struct {
 	static  http.Handler
 	limiter *limiter
 	listen  string // listen address, for the "open on phones" URLs
+	rt      Runtime
 }
 
 func New(st *store.Store, q *queue.Queue, be printer.Backend, tg *notify.Telegram, maxUploadMB int, secure bool, listen string) (*Server, error) {
@@ -173,6 +174,10 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /admin/settings", s.admin(s.getSettings))
 	m.HandleFunc("POST /admin/settings", s.admin(s.postSettings))
 	m.HandleFunc("POST /admin/test-alert", s.admin(s.postTestAlert))
+	m.HandleFunc("POST /admin/selftest", s.admin(s.postSelfTest))
+	m.HandleFunc("POST /admin/autostart", s.admin(s.postAutostart))
+	m.HandleFunc("POST /admin/service/install", s.admin(s.postServiceInstall))
+	m.HandleFunc("POST /admin/service/remove", s.admin(s.postServiceRemove))
 	return s.secureHeaders(s.sameOrigin(m))
 }
 

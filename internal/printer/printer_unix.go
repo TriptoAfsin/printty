@@ -164,3 +164,10 @@ func docName(jobID string) string { return "Printty " + jobID }
 
 // NewLight is the same as New: CUPS work already happens in other processes.
 func NewLight() Backend { return CUPS{} }
+
+func selfTest(path string) (string, error) {
+	if _, err := exec.LookPath("lp"); err != nil {
+		return "", fmt.Errorf("CUPS isn't installed (no lp command)")
+	}
+	return "CUPS is available; it renders PDFs itself.", nil
+}

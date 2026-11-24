@@ -708,3 +708,24 @@ func rotate90(src image.Image) image.Image {
 	}
 	return dst
 }
+
+func selfTest(path string) (string, error) {
+	var msg string
+	err := withWinRT(func() error {
+		doc, err := openPDF(path)
+		if err != nil {
+			return fmt.Errorf("open PDF: %w", err)
+		}
+		defer doc.close()
+		if doc.pages != 2 {
+			return fmt.Errorf("expected 2 pages, got %d", doc.pages)
+		}
+		img, err := doc.render(0, 248, 351)
+		if err != nil {
+			return fmt.Errorf("render: %w", err)
+		}
+		msg = fmt.Sprintf("Windows PDF engine works: opened 2 pages, rendered page 1 at %dx%d.", img.Bounds().Dx(), img.Bounds().Dy())
+		return nil
+	})
+	return msg, err
+}

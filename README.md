@@ -44,6 +44,15 @@ copy printty.env.example printty.env   # then fill in Telegram if you want alert
 
 Printty picks the first real printer (not "Print to PDF" or OneNote) and remembers it; change it in **Settings**. It deliberately doesn't follow the Windows default printer, because Windows moves the default to whichever printer was used last.
 
+## Start with Windows
+
+In **Settings › Start with Windows**:
+
+- **Install as a Windows service** (recommended): starts at boot before anyone signs in, restarts itself if it stops, and opens port 8631 for Private networks in Windows Firewall. Windows shows one permission prompt on the PC's screen; the running copy hands over to the service on the same address. **Remove the service** undoes all of it.
+- **Start when I sign in**: no admin needed; runs hidden (`-background`) while you're signed in.
+
+From a terminal: `printty service install -start`, `printty service uninstall`, `printty service status` (it asks for admin rights itself). The service runs as LocalSystem, reads `printty.env` next to `printty.exe` and in the data folder, and logs to `C:ProgramDataPrinttyprintty.log`. On first run without a console, the setup code is in `setup-code.txt` in the data folder. **Check printing works** in Settings renders a test page without printing, to confirm the PDF engine works in your setup.
+
 ## Configuration
 
 Settings come from environment variables or a `printty.env` file (next to the binary, in the working directory, or in the data folder). See [printty.env.example](printty.env.example).
@@ -96,7 +105,7 @@ PRINTTY_PRINT_TEST=1 go test ./internal/printer/   # real GDI print to "Microsof
 | 3 | Saved queue, status monitor, hold-and-retry, manual duplex, history | Done (needs a real G1010 power-off test) |
 | 3a | Telegram alerts with Approve/Reject, limits, cleanup | Done; mDNS name and QR code to do |
 | 3b | PWA: manifest, service worker, share target | Done; HTTPS setup to document per platform |
-| 4 | Run as a service, CUPS on real hardware, release builds | To do |
+| 4 | Run as a Windows service or at sign-in | Done (tested: install from the UI, PDF engine inside the service, removal). CUPS on real hardware and release builds to do |
 | Later | Web push, direct IPP, "PC is off" relay, Office files, passkeys | |
 
 ## License

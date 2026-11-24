@@ -180,11 +180,12 @@ type settingsData struct {
 	Current  string
 	Telegram bool
 	Links    bool
+	Startup  startupData
 }
 
 func (s *Server) getSettings(w http.ResponseWriter, r *http.Request, v viewer) {
 	ps, _ := s.be.Printers(r.Context())
-	d := settingsData{Settings: s.st.Settings(), Printers: ps, Current: s.q.Printer(r.Context()), Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork()}
+	d := settingsData{Settings: s.st.Settings(), Printers: ps, Current: s.q.Printer(r.Context()), Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork(), Startup: s.startup()}
 	s.render(w, r, "settings", page{Title: "Settings", Nav: "settings", V: v, Data: d})
 }
 

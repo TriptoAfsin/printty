@@ -1,0 +1,18 @@
+{{define "content"}}
+<main class="auth">
+  <img class="mascot" src="{{asset "icon.svg"}}" alt="">
+  {{if eq .Data "removed"}}
+  <div>
+    <h1 class="head">Service removed</h1>
+    <p class="lead">Printty has stopped and won't start with Windows. To use it again, open printty.exe on this PC.</p>
+  </div>
+  {{else}}
+  <meta http-equiv="refresh" content="4;url=/admin/settings">
+  <div>
+    <h1 class="head">Switching to the Windows service</h1>
+    <p class="lead">Printty is restarting as a service so it runs whenever this PC is on. This page reloads by itself in a few seconds.</p>
+  </div>
+  <a class="btn ghost lg" href="/admin/settings">Reload now</a>
+  {{end}}
+</main>
+{{end}}

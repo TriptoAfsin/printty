@@ -30,9 +30,10 @@ type Request struct {
 
 // Response is what the child writes on stdout.
 type Response struct {
-	Error string       `json:"error,omitempty"`
-	Pages int          `json:"pages,omitempty"`
-	Caps  printer.Caps `json:"caps,omitempty"`
+	Error   string       `json:"error,omitempty"`
+	Pages   int          `json:"pages,omitempty"`
+	Caps    printer.Caps `json:"caps,omitempty"`
+	Message string       `json:"message,omitempty"`
 }
 
 // Serve is the child side: one request in, one response out.
@@ -52,6 +53,8 @@ func Serve(in io.Reader, out io.Writer) int {
 		err = be.Print(ctx, req.Job)
 	case "pages":
 		resp.Pages, err = be.PageCount(ctx, req.Path, req.Kind)
+	case "selftest":
+		resp.Message, err = printer.SelfTest()
 	case "caps":
 		var ps []printer.Info
 		ps, err = be.Printers(ctx)
@@ -165,4 +168,10 @@ func (b *Backend) PageCount(ctx context.Context, path, kind string) (int, error)
 func (b *Backend) Print(ctx context.Context, job printer.Job) error {
 	_, err := b.call(ctx, Request{Op: "print", Job: job})
 	return err
+}
+
+// SelfTest checks the PDF engine in a child process, the same way a job runs.
+func (b *Backend) SelfTest(ctx context.Context) (string, error) {
+	resp, err := b.call(ctx, Request{Op: "selftest"})
+	return resp.Message, err
 }

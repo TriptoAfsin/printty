@@ -61,6 +61,14 @@ The server must idle under 20 MB. Rendering a PDF loads Windows' PDF engine (Dir
 
 Measured on Windows 11 after two jobs: 3.4 MB working set idle, 5.9 MB while serving a page, 19 threads. A crashing printer driver only takes down the worker.
 
+## Running in the background (Windows)
+
+- `internal/service` uses `golang.org/x/sys/windows/svc` (no new dependency). `printty service install` creates an auto-start (delayed) service running as LocalSystem with restart-on-failure, and a Private-profile firewall rule for the program and port. If not elevated, the command re-runs itself through `ShellExecuteEx` "runas" (UAC).
+- From the web UI, the admin presses **Install as a Windows service**: the user-run copy launches the elevated installer with `-start -result <file>`, waits for "ok", shows a switching page and exits; the installer waits for the port to free up, then starts the service.
+- A service removes itself with `RemoveSelf` (delete + firewall rule) and exits after replying.
+- Start at sign-in writes `HKCU\...\Run\Printty` = `printty.exe -background -addr … -data …`; background mode detaches the console and logs to `<data>/printty.log`.
+- Verified: `Windows.Data.Pdf` works in session 0 as LocalSystem (self-test), and the service sees the user-installed Canon G1010. Inside the service the Windows default printer is a different one, so Printty always uses its saved printer.
+
 ## Print backend interface
 
 ```go

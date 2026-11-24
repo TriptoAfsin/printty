@@ -14,6 +14,7 @@
         </label>
         <div class="switchrow"><div><div class="fname">Automatic two-sided</div><div class="small muted">Only if the printer has a duplex unit. The Canon G1010 doesn't.</div></div><label class="switch"><input type="checkbox" name="autoDuplex" {{if .Data.Settings.AutoDuplex}}checked{{end}} aria-label="Automatic two-sided"><span></span></label></div>
         <div class="switchrow"><div><div class="fname">Print backs last page first</div><div class="small muted">For manual flips. Turn off if the backs come out in the wrong order.</div></div><label class="switch"><input type="checkbox" name="flipReverse" {{if .Data.Settings.FlipReverse}}checked{{end}} aria-label="Print backs last page first"><span></span></label></div>
+        <button class="btn ghost" type="submit" form="selftest">Check printing works</button>
       </section>
 
       <section class="card stack">
@@ -34,6 +35,28 @@
       <button class="btn primary lg" type="submit">Save settings</button>
     </form>
     <aside class="side">
+      <form id="selftest" method="post" action="/admin/selftest" hidden></form>
+      {{with .Data.Startup}}{{if .Supported}}
+      <section class="card stack" aria-labelledby="startup-title">
+        <span class="fname" id="startup-title">Start with Windows</span>
+        {{if eq .Mode "service"}}
+        <div class="row between"><span>Windows service</span><span class="tag ok">On</span></div>
+        <p class="small muted">Printty starts when the PC boots, before anyone signs in, and restarts itself if it stops.</p>
+        <form method="post" action="/admin/service/remove"><button class="btn ghost" type="submit">Remove the service</button></form>
+        {{else}}
+        <p class="small muted">Right now Printty runs only while it's open on this PC.</p>
+        <form class="stack" method="post" action="/admin/service/install">
+          <button class="btn primary" type="submit" data-busy="Waiting for Windows…">Install as a Windows service</button>
+          <p class="hint">Recommended. Starts at boot, even before anyone signs in. Windows asks for permission on this PC's screen, and Printty opens its port for private networks.</p>
+        </form>
+        <div class="switchrow">
+          <div><div class="fname">Start when I sign in</div><div class="small muted">No admin needed. Runs only while you're signed in.</div></div>
+          <form method="post" action="/admin/autostart"><input type="hidden" name="on" value="{{if .State.AtSignIn}}0{{else}}1{{end}}"><button class="btn {{if .State.AtSignIn}}ghost{{else}}primary{{end}}" type="submit">{{if .State.AtSignIn}}Turn off{{else}}Turn on{{end}}</button></form>
+        </div>
+        {{if .State.Installed}}<p class="small">A Printty service is installed but this copy was started by hand.</p>{{end}}
+        {{end}}
+      </section>
+      {{end}}{{end}}
       <section class="card stack">
         <span class="fname">Test alerts</span>
         <p class="small muted">Sends a message to the Telegram chat{{if .Data.Links}}. Buttons will open this site, because another app uses this bot's updates{{end}}.</p>

@@ -67,4 +67,4 @@ go run ./cmd/printty                 # run locally
 
 ## Current phase
 
-v0.1 works end to end on Windows (tested by printing to "Microsoft Print to PDF" with `PRINTTY_TEST_OUTPUT_DIR`). Next: a real-paper test on the Canon G1010 (including switching it off mid-job), app icon choice, mDNS name + QR code, service install (phase 4). Secrets live in `printty.env` (gitignored): never print, log or commit them. Testing prints to a virtual printer can move the Windows default printer: check and restore it afterwards.
+v0.1 works end to end on Windows (tested by printing to "Microsoft Print to PDF" with `PRINTTY_TEST_OUTPUT_DIR`). Service install and start-at-sign-in are done and tested. Next: a real-paper test on the Canon G1010 (including switching it off mid-job), a "printer is back" alert, mDNS + QR code. Secrets live in `printty.env` (gitignored): never print, log or commit them. Testing prints to a virtual printer can move the Windows default printer: check and restore it afterwards.
