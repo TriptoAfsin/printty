@@ -1,0 +1,84 @@
+{{define "content"}}
+<main class="wrap">
+  <div>
+    <h1 class="head">Print</h1>
+    {{if .Data.Guest}}<p class="lead">Printing as {{.V.DisplayName}}, a guest. The owner approves each request.</p>{{end}}
+  </div>
+  {{template "messages" .}}
+  <form class="stack" method="post" action="/print" enctype="multipart/form-data">
+    {{if .Data.Draft}}
+    <input type="hidden" name="draft" value="{{.Data.Draft.ID}}">
+    <div class="drop">
+      <span class="thumb" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <div class="grow">
+        <div class="fname">{{.Data.Draft.FileName}}</div>
+        <div class="small muted">{{plural .Data.Draft.DocPages "page"}}</div>
+      </div>
+      <a class="small" href="/">Change</a>
+    </div>
+    {{else}}
+    <label class="drop">
+      <span class="thumb" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <div class="grow">
+        <div class="fname" id="picked">Choose a file</div>
+        <div class="small muted">PDF, JPG or PNG</div>
+      </div>
+      <span class="pick">Browse</span>
+      <input type="file" name="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" data-name="picked" required>
+    </label>
+    {{end}}
+
+    <div class="grid2">
+      <div class="field">
+        <label class="label" for="copies">Copies</label>
+        <div class="stepper">
+          <button type="button" data-step="-1" aria-controls="copies" aria-label="One fewer copy">−</button>
+          <input id="copies" name="copies" type="number" inputmode="numeric" min="1" max="20" value="1">
+          <button type="button" data-step="1" aria-controls="copies" aria-label="One more copy">+</button>
+        </div>
+      </div>
+      <fieldset class="field">
+        <legend>Pages</legend>
+        <div class="seg">
+          <label><input type="radio" name="pagemode" value="all" checked>All</label>
+          <label><input type="radio" name="pagemode" value="range">Range</label>
+        </div>
+      </fieldset>
+    </div>
+    <label class="field range-input"><span class="label">Which pages <span class="muted">e.g. 1-3, 5</span></span><input class="input" name="pages" inputmode="numeric" placeholder="1-3, 5"></label>
+
+    <fieldset class="field">
+      <legend>Sides {{if not .Data.Caps.AutoDuplex}}<span class="muted">Two-sided is a manual flip</span>{{end}}</legend>
+      <div class="seg">
+        <label><input type="radio" name="duplex" value="one-sided" checked>One-sided</label>
+        <label><input type="radio" name="duplex" value="two-sided">Two-sided</label>
+      </div>
+    </fieldset>
+
+    {{if .Data.Caps.Color}}
+    <fieldset class="field">
+      <legend>Colour</legend>
+      <div class="seg">
+        <label><input type="radio" name="color" value="color" checked>Colour</label>
+        <label><input type="radio" name="color" value="mono">Black and white</label>
+      </div>
+    </fieldset>
+    {{else}}<input type="hidden" name="color" value="mono">{{end}}
+
+    <fieldset class="field">
+      <legend>Paper</legend>
+      <div class="seg">
+        {{range .Data.Papers}}<label><input type="radio" name="paper" value="{{.}}" {{if eq . "A4"}}checked{{end}}>{{if eq . "4x6"}}4×6{{else if eq . "5x7"}}5×7{{else}}{{.}}{{end}}</label>{{end}}
+      </div>
+    </fieldset>
+
+    {{if not .V.AutoApprove}}
+    <label class="field"><span class="label">Note for the owner <span class="muted">Optional</span></span><input class="input" name="note" maxlength="200" placeholder="For class tomorrow"></label>
+    <p class="note"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span>The owner approves this and gets a message now, so the printer can be readied.</span></p>
+    <button class="btn primary lg" type="submit" data-busy="Sending…">Send request</button>
+    {{else}}
+    <button class="btn primary lg" type="submit" data-busy="Sending…">Print</button>
+    {{end}}
+  </form>
+</main>
+{{end}}

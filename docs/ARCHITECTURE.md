@@ -12,8 +12,11 @@ Printty is one Go binary with six parts: web server, users and auth, job queue, 
 | Print backend | `internal/printer` | List printers and capabilities, print a job with options |
 | Status monitor | `internal/status` | Decide whether each printer is really ready, from several signals |
 | Notifier | `internal/notify` | Telegram Bot API and SMTP email, with a cooldown so one outage sends one message |
-| Config | `internal/config` | Load and validate `printty.toml` |
-| Entry point | `cmd/printty` | Flags, service install/uninstall/run via `kardianos/service` |
+| Print worker | `internal/worker` | Runs rendering and printing in a short-lived child process (`printty worker`) |
+| Memory trim | `internal/memtrim` | GC, return freed memory to the OS, trim the working set after work |
+| Store | `internal/store` | Users, sessions, invites, jobs, settings in one JSON file, atomic writes |
+| Config | `internal/config` | Environment variables and `printty.env` |
+| Entry point | `cmd/printty` | Flags, `worker` mode; service install planned (phase 4) |
 
 ## Target hardware (v1)
 
@@ -27,7 +30,7 @@ Printty is one Go binary with six parts: web server, users and auth, job queue, 
 | Member | Invite link or QR code made by the admin (single use, expires in 7 days); sets a name and password | Sends requests. Per member: `needs approval` (default) or `trusted` (auto-approved) |
 | Guest | Optional, off by default. No account: enters a name and an optional note | Every request needs approval; rate-limited per IP (default 3 per hour); max pages per request |
 
-- Passwords hashed with argon2id (`golang.org/x/crypto`). Sessions are random 32-byte tokens in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie, stored server-side and revocable. Passkeys are a later option.
+- Passwords hashed with argon2id (`golang.org/x/crypto`). Sessions are random 32-byte tokens in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` over HTTPS), stored only as SHA-256 hashes and revocable. Lax rather than Strict so links from Telegram and the share sheet arrive signed in. Passkeys are a later option.
 - Admins can disable a member, revoke their sessions, or switch them between `needs approval` and `trusted`.
 - Every request records who sent it (user or guest name + IP), and the job history shows it.
 
@@ -45,8 +48,18 @@ submitted ──► pending_approval ──► approved ──► queued ──�
 
 - `pending_approval` is the request inbox. Approving is the admin's signal that the printer is ready (powered on, paper loaded). Requests not acted on expire after a configurable time (default 24 h) and their files are deleted.
 - `held` jobs resume automatically when the status monitor reports the printer ready.
-- The requester sees their job's state live on the Queue screen (server-sent events).
+- The requester sees their job's state live on the Queue screen (the page refreshes its job list every few seconds while visible).
 - Uploaded files are deleted when a job reaches `done` or `failed`, and by a sweep after a configurable age.
+
+## Memory budget: the worker process
+
+The server must idle under 20 MB. Rendering a PDF loads Windows' PDF engine (Direct2D) and the printer driver, which leave about 100 threads and 200 MB committed behind if they run in the server. So the server never renders or loads drivers:
+
+- `printer.NewLight()` gives the server printer names, status and spooler checks only (no `DeviceCapabilities`).
+- Page counts, printer capabilities and printing run in `printty worker`: the same binary, started per job, JSON request on stdin, JSON reply on stdout, then exit. Capabilities are cached in the server after the first ask.
+- The server also calls `debug.SetMemoryLimit(24 MB)`, `SetGCPercent(50)`, and trims its working set after jobs.
+
+Measured on Windows 11 after two jobs: 3.4 MB working set idle, 5.9 MB while serving a page, 19 threads. A crashing printer driver only takes down the worker.
 
 ## Print backend interface
 
@@ -120,7 +133,8 @@ Events that notify the admin:
 Channels:
 
 - **Telegram** (primary): `sendMessage` with an inline keyboard for the actions. Button presses arrive through **long polling** (`getUpdates`), so no public webhook or open port is needed. Only presses from the configured admin chat IDs are accepted; each callback carries a signed, single-use token.
-- **Web Push** to the admin's installed PWA (VAPID keys generated on first run). Tapping the notification opens the request.
+- If the bot already has a webhook (another app such as n8n uses it), Telegram delivers button presses there. Printty checks `getWebhookInfo` at startup and, if a webhook is set, sends link buttons that open the Requests page instead of callback buttons, and doesn't poll.
+- **Web Push** to the admin's installed PWA: planned, not built yet.
 - **Email** (fallback): plain SMTP with STARTTLS; no actions, just a link.
 - Requesters are told the outcome in the web UI (and by push, if they installed the PWA).
 - Messages are short and actionable. Offline alerts have a per-printer cooldown so one outage sends one message.
@@ -157,13 +171,14 @@ Printty serves HTTPS itself (`crypto/tls`), loading the cert from a configured p
 
 - LAN only by default; bind address configurable. Remote access through Tailscale, never port forwarding.
 - Every endpoint except login, invite redemption, the guest request form (when enabled) and static assets requires a session. Roles are checked on the server for every action.
-- CSRF: `SameSite=Strict` cookies plus an `Origin` check on every state-changing request.
+- CSRF: `SameSite=Lax` cookies, plus every POST is rejected when `Origin` names another host or `Sec-Fetch-Site` is `cross-site`. The share target is the one exception: it only creates a draft that a signed-in person or guest must confirm.
+- Strict CSP (`default-src 'self'`, no inline scripts or styles), `X-Frame-Options: DENY`, `nosniff`.
 - Login and guest endpoints are rate-limited per IP.
 - Upload limit (default 50 MB), allow-list of content types checked by magic bytes, files stored outside the web root with random names.
 
 ## Storage
 
-A data directory (`%ProgramData%\Printty` on Windows, `/var/lib/printty` on Linux, `~/Library/Application Support/Printty` on macOS) holds uploaded files and a small job index (JSON or bbolt). No database server.
+A data directory (`%ProgramData%\Printty` on Windows, `/var/lib/printty` on Linux, `~/Library/Application Support/Printty` on macOS) holds `state.json` (users, hashed sessions and invites, jobs, settings, a signing secret) and `files/` (uploads under random names). No database server. Finished jobs are pruned after 72 hours; their files are deleted as soon as they finish.
 
 ## Build
 

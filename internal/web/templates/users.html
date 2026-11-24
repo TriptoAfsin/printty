@@ -1,0 +1,56 @@
+{{define "content"}}
+<main class="wrap wide">
+  {{template "messages" .}}
+  <div class="cols">
+    <div class="main">
+      <div class="row between">
+        <h1 class="head">Users</h1>
+        <form class="inline" method="post" action="/admin/invites"><button class="btn primary" type="submit">Invite someone</button></form>
+      </div>
+      {{if .Data.NewLink}}
+      <section class="card flip stack">
+        <span class="fname">Invite link ready</span>
+        <span class="small">Send this to one person. It works once and lasts 7 days.</span>
+        <div class="copy"><input class="input" id="invite" value="{{.Data.NewLink}}" readonly aria-label="Invite link"><button class="btn primary" type="button" data-copy="invite">Copy</button></div>
+      </section>
+      {{end}}
+      <section class="card">
+        <div class="tablebox">
+          <table class="table">
+            <thead><tr><th>Name</th><th>Role</th><th>Approval</th><th>Last print</th><th>Devices</th><th><span class="vh">Actions</span></th></tr></thead>
+            <tbody>
+            {{range .Data.Users}}
+            <tr>
+              <td><span class="person"><span class="avatar">{{initial .Name}}</span>{{.Name}}{{if .Disabled}} <span class="tag held">No access</span>{{end}}</span></td>
+              <td>{{if eq .Role "admin"}}Admin{{else}}Member{{end}}</td>
+              <td>{{if eq .Role "admin"}}Prints directly{{else if .Trusted}}Trusted{{else}}Needs approval{{end}}</td>
+              <td class="muted">{{if .LastPrint.IsZero}}Never{{else}}{{clock .LastPrint}}{{end}}</td>
+              <td>{{.Sessions}}</td>
+              <td>
+                {{if ne .Role "admin"}}
+                <div class="acts">
+                  {{if .Trusted}}<form class="inline" method="post" action="/admin/users/{{.ID}}/untrust"><button class="btn quiet" type="submit">Require approval</button></form>
+                  {{else}}<form class="inline" method="post" action="/admin/users/{{.ID}}/trust"><button class="btn quiet" type="submit">Trust</button></form>{{end}}
+                  {{if .Disabled}}<form class="inline" method="post" action="/admin/users/{{.ID}}/enable"><button class="btn quiet" type="submit">Restore</button></form>
+                  {{else}}<form class="inline" method="post" action="/admin/users/{{.ID}}/disable"><button class="btn quiet" type="submit">Remove access</button></form>{{end}}
+                </div>
+                {{end}}
+              </td>
+            </tr>
+            {{end}}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {{if .Data.Invites}}<p class="small muted">{{plural .Data.Invites "invite"}} not used yet.</p>{{end}}
+    </div>
+    <aside class="side">
+      <section class="card stack">
+        <span class="fname">Guest requests</span>
+        <p class="small muted">{{if .Data.Settings.GuestsEnabled}}On. Anyone on the network can ask with their name, at most {{.Data.Settings.GuestPerHour}} an hour per device.{{else}}Off. Only invited people can print.{{end}}</p>
+        <a class="btn ghost" href="/admin/settings">Change in Settings</a>
+      </section>
+    </aside>
+  </div>
+</main>
+{{end}}

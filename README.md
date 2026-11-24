@@ -1,79 +1,97 @@
 # Printty
 
-A lean print server you leave running on one computer. Phones and laptops on the same network open a web page, upload a file, choose how it prints, and send it. If the printer is off, the job waits and Printty messages someone on Telegram (or email) to switch it on.
+A lean print server you leave running on one computer. Phones and laptops on the same network open a web page, upload a file, choose how it prints, and send it. Nothing prints until the owner approves it, every incoming request pings the owner on Telegram so the printer can be readied, and if the printer is off the job waits and prints by itself once it's back.
 
-> Status: planning. Nothing is built yet. See [Roadmap](#roadmap).
+> Status: **v0.1 works end to end on Windows 11** with a Canon G1010 (USB). Linux/macOS (CUPS) builds and is untested on hardware. See [Roadmap](#roadmap).
 
 ## Why
 
-Sharing a USB or home printer with phones is still awkward. The options are either enterprise tools (PaperCut), Linux-only projects built on CUPS, or cloud services. Printty aims to be:
+Sharing a USB or home printer with phones is still awkward: enterprise tools (PaperCut), Linux-only projects built on CUPS, or cloud services. Printty is:
 
-- **One file.** A single Go binary with the web UI built in. No runtime, no bundled third-party apps.
-- **Light enough to run 24/7.** Target: about 15–30 MB of memory when idle.
-- **Native on each OS.** Windows printing uses Windows' own PDF engine and print API; Linux and macOS use CUPS.
-- **Honest about the printer.** Printty checks several signals, because Windows often reports a switched-off USB printer as "Idle".
+- **One file.** A single Go binary (about 11 MB) with the web UI, fonts and icons built in. No runtime, no bundled third-party apps, no cgo.
+- **Light enough to run 24/7.** Measured on Windows 11: about **4 MB of RAM when idle** (working set), 6 MB while serving pages, 19 threads. Heavy work happens in a short-lived child process that exits after each job.
+- **Native on each OS.** Windows uses its own PDF engine (`Windows.Data.Pdf`) and the Win32 print API; Linux and macOS use CUPS.
+- **Honest about the printer.** Windows often reports a switched-off USB printer as "Idle", so Printty also watches for jobs stuck in the spooler.
 
-## Features (v1 scope)
+## Features
 
-First target: one **Canon G1010** (USB, colour inkjet, no automatic duplex) on Windows 11. Default paper: **A4**.
+- **Permission first.** Admin (you) prints directly and approves others. Members join by invite link and need approval unless you mark them trusted. Guests (off by default) type a name and always need approval; rate-limited per device.
+- **Incoming-request alerts** on Telegram with who, what, pages, colour and paper. With a dedicated bot, Approve/Reject work right inside Telegram.
+- **Print options:** copies, page ranges, one/two-sided, colour or black and white, paper size (A4 default; the list comes from the printer driver).
+- **Manual duplex** for printers without a duplex unit (like the G1010): fronts print, Printty asks you to flip the stack, backs print.
+- **Holds jobs while the printer is off** and alerts once; they print when it's back.
+- **Installable PWA** with a share target: share a PDF or photo to Printty from any Android app (needs HTTPS). Offline screen when the PC is off.
+- **Light and dark mode**, phone-first UI (Ribbon theme, see [DESIGN.md](DESIGN.md)).
+- Files are deleted after printing; requests expire after 24 hours.
 
-- **Nothing prints without permission.** Every request is checked against who sent it:
-  - **Admin** (the owner): prints directly and approves everyone else.
-  - **Members** (invited by the admin): sign in and send print requests; each member is set to "needs approval" (default) or "trusted" (auto-approved).
-  - **Guests** (optional, off by default): anyone on the network can send a request with their name; it always needs approval and is rate-limited.
-- **Incoming-job alert**: every new request notifies the admin right away (Telegram and push to the installed PWA), with who, what, pages, colour and paper, so the printer can be readied. Approve or reject from the Telegram message or the web page.
-- **Manual duplex** for printers without a duplex unit: odd pages print, Printty asks you to flip the stack, then even pages print.
-- Installable PWA: add Printty to the home screen, then **share a PDF or photo straight to Printty** from any app's share sheet (Android and desktop Chromium; iOS falls back to upload in the page).
-- Upload PDF, JPG or PNG from any phone browser.
-- Options: printer, copies, page range, duplex (off / long edge / short edge), colour or black and white, paper size.
-- Job queue that survives restarts; jobs wait while the printer is off and print once it is back.
-- Telegram alert when a job is stuck on an offline printer; email fallback.
-- Accounts with invite links, upload size limit, files deleted after printing.
-- Found on the network as `printty.local`, with a QR code for quick access.
+## Quick start (Windows)
 
-Not in v1: Word/Office files, appearing in the phone's built-in print menu (IPP Everywhere / AirPrint), internet exposure (use [Tailscale](https://tailscale.com) for remote access), alerts when the host PC itself is off.
+```powershell
+go build -trimpath -ldflags "-s -w" -o printty.exe ./cmd/printty
+copy printty.env.example printty.env   # then fill in Telegram if you want alerts
+.\printty.exe
+```
+
+1. The console prints a **setup code**. Open `http://localhost:8631/setup`, enter it, and create the owner account.
+2. In **Users**, press **Invite someone** and send the link.
+3. Phones on the same Wi-Fi open `http://<this PC's name or IP>:8631`. Allow port 8631 in Windows Firewall for private networks.
+
+Printty picks the first real printer (not "Print to PDF" or OneNote) and remembers it; change it in **Settings**. It deliberately doesn't follow the Windows default printer, because Windows moves the default to whichever printer was used last.
+
+## Configuration
+
+Settings come from environment variables or a `printty.env` file (next to the binary, in the working directory, or in the data folder). See [printty.env.example](printty.env.example).
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `PRINTTY_ADDR` | `:8631` | Listen address |
+| `PRINTTY_DATA_DIR` | `C:\ProgramData\Printty` | Users, jobs and uploaded files |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | (off) | Alerts. Chat IDs can be comma-separated |
+| `PRINTTY_PUBLIC_URL` | (none) | Base URL for links in alerts |
+| `PRINTTY_TLS_CERT`, `PRINTTY_TLS_KEY` | (none) | Serve HTTPS |
+| `PRINTTY_MAX_UPLOAD_MB` | `50` | Upload limit |
+
+Everything else (guests, limits, flip order, alert switches) is in the admin **Settings** page.
+
+**Telegram:** if the bot is also used by another app with a webhook (for example n8n), Telegram sends button presses there, so Printty detects the webhook and sends buttons that open the Requests page instead. For one-tap Approve/Reject in Telegram, create a dedicated bot with @BotFather.
+
+**HTTPS** is needed to install the app and use the phone share sheet. The simplest route is [Tailscale](https://tailscale.com): `tailscale cert` gives a trusted certificate for `<pc>.<tailnet>.ts.net`, and it also gives safe remote access. Never port-forward Printty to the internet.
 
 ## How it works
 
 ```
-phone browser ──► web server + UI ──► job queue ──► print backend ──► printer
-                                         ▲              │
-                                         │       Windows: Windows.Data.Pdf → Win32 print API (DEVMODE)
-                                         │       Linux/macOS: CUPS `lp`
-                                  status monitor ◄── printer status (WMI / lpstat, stuck jobs, IPP ping)
-                                         │
-                                      notifier ──► Telegram / email
+phone browser ──► web server + auth ──► job queue ──► printty worker (child process) ──► printer
+                                           ▲              Windows: Windows.Data.Pdf → Win32 print API
+                                           │              Linux/macOS: CUPS lp
+                                   status monitor ◄── Windows status, stuck spooler jobs
+                                           │
+                                       notifier ──► Telegram
 ```
 
-Technical details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). UI design system: [DESIGN.md](DESIGN.md).
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). UI system: [DESIGN.md](DESIGN.md).
 
-## Requirements
-
-- To run: Windows 10/11, Linux with CUPS, or macOS. Nothing else.
-- To build: Go 1.27+.
-
-## Build and run
-
-Not available yet. The planned commands:
+## Development
 
 ```sh
-go build -o printty ./cmd/printty
-./printty                     # run in the foreground, reads printty.toml
-./printty service install     # install as a Windows service / systemd / launchd unit
+go vet ./... && GOOS=linux go vet ./...
+go test ./...
+PRINTTY_PRINT_TEST=1 go test ./internal/printer/   # real GDI print to "Microsoft Print to PDF", no paper
 ```
+
+`PRINTTY_TEST_OUTPUT_DIR=<folder>` makes the Windows backend print into PDF files there (use with the "Microsoft Print to PDF" printer selected in Settings), so the whole flow can be tested without paper.
 
 ## Roadmap
 
-| Phase | Deliverable | Done when |
+| Phase | Deliverable | Status |
 | --- | --- | --- |
-| 0 | Spike: native Windows PDF printing | A 2-page duplex PDF prints correctly from a service with no user logged in |
-| 1 | Skeleton: server, embedded UI, admin login, printer list, upload and print with options | The admin's phone prints a PDF and a photo on the G1010 with chosen options |
-| 2 | Users, roles, invites, guest requests, approval queue | A member's request waits until the admin approves it on the web page |
-| 3 | Saved queue, status monitor, hold-and-retry, manual duplex, job history | A job sent while the printer is off prints after it is switched on; a duplex job pauses for the flip |
-| 3a | Telegram (incoming-job alerts with Approve/Reject buttons, printer-off alerts), web push, email fallback, limits, cleanup, mDNS, QR code | A guest's request pings Telegram and tapping Approve prints it |
-| 3b | PWA: HTTPS, manifest, service worker, share target | On Android, sharing a PDF from the Files app to Printty opens it ready to print |
-| 4 | Service install, CUPS backend, release builds | The same release installs and prints on Windows 11 and Linux |
-| Later | Direct IPP to network printers, cloud relay for "PC is off" alerts, Office files, native phone print menu | — |
+| 0 | Native Windows PDF printing | Done: `Windows.Data.Pdf` + GDI, tested to PDF |
+| 1 | Server, embedded UI, admin setup, upload and print with options | Done |
+| 2 | Users, invites, guests, approval queue | Done |
+| 3 | Saved queue, status monitor, hold-and-retry, manual duplex, history | Done (needs a real G1010 power-off test) |
+| 3a | Telegram alerts with Approve/Reject, limits, cleanup | Done; mDNS name and QR code to do |
+| 3b | PWA: manifest, service worker, share target | Done; HTTPS setup to document per platform |
+| 4 | Run as a service, CUPS on real hardware, release builds | To do |
+| Later | Web push, direct IPP, "PC is off" relay, Office files, passkeys | |
 
 ## License
 

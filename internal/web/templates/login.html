@@ -1,0 +1,22 @@
+{{define "content"}}
+<main class="auth">
+  <img class="mascot" src="/static/icon.svg" alt="">
+  <div>
+    <h1 class="head">Welcome back</h1>
+    <p class="lead">Sign in to send something to the printer at home.</p>
+  </div>
+  {{template "messages" .}}
+  <form class="stack" method="post" action="/login">
+    <input type="hidden" name="next" value="{{.Data.Next}}">
+    <label class="field"><span class="label">Username</span><input class="input" name="username" autocomplete="username" autocapitalize="none" value="{{.Data.Username}}" required></label>
+    <label class="field"><span class="label">Password</span><input class="input" type="password" name="password" autocomplete="current-password" required></label>
+    <button class="btn primary lg" type="submit" data-busy="Signing in…">Sign in</button>
+  </form>
+  {{if .Data.Guests}}
+  <div class="divider">or</div>
+  <a class="btn ghost lg" href="/guest{{if .Data.Next}}?next={{.Data.Next}}{{end}}">Ask as a guest</a>
+  <p class="hint">Guests type their name. The owner approves every guest print.</p>
+  {{end}}
+  <p class="small muted">Got an invite? Open the link on this phone to set up your account.</p>
+</main>
+{{end}}

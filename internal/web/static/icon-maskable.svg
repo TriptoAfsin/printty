@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 256 256" role="img" aria-label="Printty">
+  <defs>
+    <linearGradient id="bgm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d8f88"/><stop offset="1" stop-color="#1b5a57"/></linearGradient>
+  </defs>
+  <rect width="256" height="256" fill="url(#bgm)"/>
+  <image href="/static/icon.svg" x="26" y="26" width="204" height="204"/>
+</svg>

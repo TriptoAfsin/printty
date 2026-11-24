@@ -1,0 +1,18 @@
+{{define "content"}}
+<main class="auth">
+  <img class="mascot" src="/static/icon.svg" alt="">
+  <div>
+    <h1 class="head">Set up Printty</h1>
+    <p class="lead">Create the owner account. You'll approve everyone else's prints.</p>
+  </div>
+  {{template "messages" .}}
+  <form class="stack" method="post" action="/setup">
+    <label class="field"><span class="label">Setup code <span class="muted">Shown where Printty is running</span></span><input class="input" name="code" autocomplete="one-time-code" autocapitalize="characters" required></label>
+    <label class="field"><span class="label">Your name</span><input class="input" name="name" autocomplete="name" required></label>
+    <label class="field"><span class="label">Username</span><input class="input" name="username" autocomplete="username" autocapitalize="none" required></label>
+    <label class="field"><span class="label">Password <span class="muted">8 characters or more</span></span><input class="input" type="password" name="password" autocomplete="new-password" minlength="8" required></label>
+    <label class="field"><span class="label">Password again</span><input class="input" type="password" name="password2" autocomplete="new-password" minlength="8" required></label>
+    <button class="btn primary lg" type="submit" data-busy="Setting up…">Create owner account</button>
+  </form>
+</main>
+{{end}}

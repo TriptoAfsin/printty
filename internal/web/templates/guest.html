@@ -1,0 +1,24 @@
+{{define "content"}}
+<main class="auth">
+  <img class="mascot" src="/static/icon.svg" alt="">
+  {{if .Data.Off}}
+  <div>
+    <h1 class="head">Guest printing is off</h1>
+    <p class="lead">Ask the owner for an invite, or to switch guest requests on.</p>
+  </div>
+  <a class="btn ghost lg" href="/login">Sign in</a>
+  {{else}}
+  <div>
+    <h1 class="head">Ask as a guest</h1>
+    <p class="lead">Tell the owner who you are. They'll get your request and approve it before anything prints.</p>
+  </div>
+  {{template "messages" .}}
+  <form class="stack" method="post" action="/guest">
+    <input type="hidden" name="next" value="{{.Data.Next}}">
+    <label class="field"><span class="label">Your name</span><input class="input" name="name" autocomplete="name" maxlength="40" required></label>
+    <button class="btn primary lg" type="submit">Continue</button>
+  </form>
+  <a class="btn quiet" href="/login">I have an account</a>
+  {{end}}
+</main>
+{{end}}

@@ -8,12 +8,63 @@
   --color-error: oklch(52% 0.19 27); --color-success: oklch(50% 0.12 150);
   --container: 1440px; --gutter: 64px; --gap-columns: 32px; --section-gap-s: 120px; --section-gap: 144px; --section-gap-l: 176px;
   --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
-  --color-paper: oklch(95.5% 0.006 250); --color-paper-2: oklch(91% 0.009 250); --color-paper-3: oklch(99.5% 0.005 250);
-  --color-ink: oklch(16% 0.014 262); --color-ink-2: oklch(29% 0.014 262); --color-muted: oklch(47% 0.016 260);
-  --color-rule: oklch(80% 0.011 250); --color-ink-rule: oklch(34% 0.014 262);
-  --color-accent: oklch(51% 0.22 264); --color-accent-2: oklch(81% 0.16 82); --color-accent-ink: oklch(99.5% 0.003 250); --color-focus: oklch(51% 0.22 264);
-  --font-display: "Chivo Mono", ui-monospace, monospace; --font-body: var(--font-display); --font-outlier: var(--font-body);
-  --radius-card: 0; --radius-pill: 999px; --rule-hair: 1px; --rule-bar: 2px;
-  --shadow-card: 0 24px 40px -24px oklch(8% 0.01 260 / 0.6);
-  --tracking-display: -0.03em; --display-weight: 800;
+  --color-paper: oklch(98.2% 0.008 82); --color-paper-2: oklch(95.8% 0.011 82); --color-paper-3: oklch(92.3% 0.014 82);
+  --color-ink: oklch(18% 0.006 80); --color-ink-2: oklch(30% 0.008 80); --color-muted: oklch(47% 0.012 80);
+  --color-rule: oklch(89.5% 0.011 82); --color-rule-2: oklch(93.5% 0.009 82);
+  --color-accent: oklch(44% 0.075 190); --color-accent-soft: oklch(92% 0.028 190); --color-accent-ink: oklch(98% 0.006 85); --color-focus: oklch(52% 0.09 190);
+  --color-band: oklch(26% 0.045 195); --color-band-ink: oklch(94% 0.012 85);
+  --color-slot: oklch(69% 0.07 80);
+  --metal-hi: oklch(97% 0.006 85); --metal-lo: oklch(85% 0.01 85);
+  --edge-light: inset 0 1px 0 oklch(100% 0 0 / 0.5);
+  --shadow-part: 0 1px 0 oklch(20% 0.01 80 / 0.25), 0 10px 18px -6px oklch(20% 0.01 80 / 0.3);
+  --shadow-panel: 0 1px 0 oklch(20% 0.01 80 / 0.2), 0 24px 48px -16px oklch(20% 0.02 80 / 0.35);
+  --font-display: "Instrument Sans", ui-sans-serif, system-ui, sans-serif; --font-body: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-outlier: "JetBrains Mono", ui-monospace, monospace;
+  --radius-card: 20px; --radius-part: 6px; --radius-pill: 999px; --rule-hair: 1px;
+  --shadow-card: none;
+  --tracking-display: -0.035em; --display-weight: 400;
+}
+
+/* Printty additions to Ribbon (dawn), from the approved mock-up */
+:root {
+  color-scheme: light dark;
+  --color-raised: oklch(99.7% 0.004 85);            /* cards, chosen segment */
+  --color-ring: oklch(80% 0.012 82);                /* 1.5px control rings */
+  --color-accent-deep: oklch(38% 0.07 190);         /* primary hover */
+  --color-on-soft: oklch(34% 0.06 190);             /* text on accent-soft */
+  --color-warn: oklch(48% 0.11 65); --color-warn-soft: oklch(94% 0.045 80);
+  --color-ok: oklch(46% 0.1 155); --color-ok-soft: oklch(94% 0.04 155);
+  --radius-screen: 36px; --radius-card: 22px; --radius-inner: 14px;
+  --shadow-card: 0 1px 0 oklch(20% 0.01 80 / 0.05), 0 14px 32px -14px oklch(20% 0.02 80 / 0.2);
+  --body-weight: 400; --head-weight: 500;
+}
+
+/* Dark mode: parity, re-derived per Hallmark dark-mode.md (accent hue 190 never moves) */
+[data-mode="dark"] {
+  color-scheme: dark;
+  --color-paper: oklch(15% 0.016 230); --color-paper-2: oklch(18.5% 0.018 230); --color-paper-3: oklch(22% 0.02 230); --color-raised: oklch(25% 0.022 230);
+  --color-ink: oklch(94% 0.01 85); --color-ink-2: oklch(84% 0.012 85); --color-muted: oklch(72% 0.02 230);
+  --color-rule: oklch(28% 0.018 230); --color-rule-2: oklch(24% 0.018 230); --color-ring: oklch(40% 0.022 230);
+  --color-accent: oklch(74% 0.085 190); --color-accent-deep: oklch(68% 0.08 190); --color-accent-soft: oklch(30% 0.04 195);
+  --color-accent-ink: oklch(17% 0.025 210); --color-on-soft: oklch(86% 0.06 190); --color-focus: oklch(78% 0.09 190);
+  --color-warn: oklch(84% 0.1 78); --color-warn-soft: oklch(30% 0.05 70);
+  --color-ok: oklch(82% 0.09 155); --color-ok-soft: oklch(28% 0.04 155);
+  --color-error: oklch(74% 0.13 27); --color-success: oklch(82% 0.09 155);
+  --shadow-card: inset 0 0 0 1px var(--color-rule);
+  --body-weight: 350;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode]) {
+    color-scheme: dark;
+    --color-paper: oklch(15% 0.016 230); --color-paper-2: oklch(18.5% 0.018 230); --color-paper-3: oklch(22% 0.02 230); --color-raised: oklch(25% 0.022 230);
+    --color-ink: oklch(94% 0.01 85); --color-ink-2: oklch(84% 0.012 85); --color-muted: oklch(72% 0.02 230);
+    --color-rule: oklch(28% 0.018 230); --color-rule-2: oklch(24% 0.018 230); --color-ring: oklch(40% 0.022 230);
+    --color-accent: oklch(74% 0.085 190); --color-accent-deep: oklch(68% 0.08 190); --color-accent-soft: oklch(30% 0.04 195);
+    --color-accent-ink: oklch(17% 0.025 210); --color-on-soft: oklch(86% 0.06 190); --color-focus: oklch(78% 0.09 190);
+    --color-warn: oklch(84% 0.1 78); --color-warn-soft: oklch(30% 0.05 70);
+    --color-ok: oklch(82% 0.09 155); --color-ok-soft: oklch(28% 0.04 155);
+    --color-error: oklch(74% 0.13 27); --color-success: oklch(82% 0.09 155);
+    --shadow-card: inset 0 0 0 1px var(--color-rule);
+    --body-weight: 350;
+  }
 }

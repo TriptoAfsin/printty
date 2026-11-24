@@ -1,0 +1,30 @@
+{{define "content"}}
+<main class="wrap">
+  <div>
+    <h1 class="head">Your prints</h1>
+    <p class="lead small">{{if .V.SignedIn}}Signed in as {{.V.DisplayName}}.{{else}}Printing as {{.V.DisplayName}}, a guest.{{end}} Updates live.</p>
+  </div>
+  {{template "messages" .}}
+  <div class="jobs" data-live="4000">
+    {{range .Data}}
+    <article class="card job">
+      <div class="row between"><span class="fname">{{.FileName}}</span>{{template "jobtag" .}}</div>
+      {{if eq .State "printing"}}{{if .Total}}<progress max="{{.Total}}" value="{{.Progress}}" aria-label="Progress for {{.FileName}}"></progress>{{end}}{{end}}
+      <span class="small muted">{{template "jobmeta" .}}. {{clock .CreatedAt}}</span>
+      {{if .Reason}}<span class="small">{{.Reason}}</span>{{end}}
+      {{if eq .State "awaiting_flip"}}<span class="small">The fronts are printed. The owner will flip the stack for the backs.</span>{{end}}
+      {{if or (eq .State "pending_approval") (eq .State "queued") (and (eq .State "held") (not .Spooled))}}
+      <form class="inline" method="post" action="/jobs/{{.ID}}/cancel"><button class="btn quiet" type="submit">Cancel</button></form>
+      {{end}}
+    </article>
+    {{else}}
+    <div class="card empty stack">
+      <p class="fname">Nothing here yet</p>
+      <p class="muted small">Your print requests and their status show up here.</p>
+      <a class="btn primary" href="/">Print something</a>
+    </div>
+    {{end}}
+  </div>
+  <p class="hint">Files are deleted after printing.</p>
+</main>
+{{end}}

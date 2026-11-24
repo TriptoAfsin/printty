@@ -1,0 +1,106 @@
+{{define "content"}}
+<main class="wrap wide">
+  {{template "messages" .}}
+  <div class="cols" data-live="5000">
+    <div class="main">
+      <section class="stack">
+        <div>
+          <h1 class="head">Requests</h1>
+          <p class="lead">Approve when the printer is on and has paper. It prints straight away.</p>
+        </div>
+        {{range .Data.Requests}}
+        <article class="card req">
+          <span class="thumb" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <div class="reqmeta">
+            <div class="row"><span class="fname">{{.Who}}</span><span class="tag">{{.Role}}</span><span class="small muted">{{clock .CreatedAt}}</span></div>
+            <span>{{.FileName}}</span>
+            {{if .Note}}<p class="quote">"{{.Note}}"</p>{{end}}
+            <div class="tags">
+              <span class="tag">{{plural .Pages "page"}}{{if .Options.Pages}} of {{.DocPages}}{{end}}</span>
+              <span class="tag">{{if .Options.Color}}Colour{{else}}Black and white{{end}}</span>
+              <span class="tag">{{.Options.Paper}}</span>
+              {{if ne .Options.Duplex "one-sided"}}<span class="tag">Two-sided, manual flip</span>{{end}}
+              <span class="tag">{{plural .Options.Copies "copy"}}</span>
+            </div>
+          </div>
+          <div class="acts">
+            <form class="inline" method="post" action="/admin/jobs/{{.ID}}/reject"><button class="btn ghost" type="submit">Reject</button></form>
+            <form class="inline" method="post" action="/admin/jobs/{{.ID}}/approve"><button class="btn primary" type="submit">Approve</button></form>
+          </div>
+        </article>
+        {{else}}
+        <div class="card empty stack">
+          <p class="fname">No requests waiting</p>
+          <p class="muted small">New requests appear here and on Telegram.</p>
+        </div>
+        {{end}}
+      </section>
+
+      {{if .Data.Active}}
+      <section class="stack">
+        <h2 class="head">Printing and waiting</h2>
+        {{range .Data.Active}}
+        <article class="card job">
+          <div class="row between"><span class="fname">{{.FileName}}</span>{{template "jobtag" .}}</div>
+          <span class="small muted">{{.Who}}: {{template "jobmeta" .}}</span>
+          {{if .Reason}}<span class="small">{{.Reason}}</span>{{end}}
+          {{if not .Spooled}}{{if ne .State "awaiting_flip"}}<form class="inline" method="post" action="/admin/jobs/{{.ID}}/cancel"><button class="btn quiet" type="submit">Cancel</button></form>{{end}}{{end}}
+        </article>
+        {{end}}
+      </section>
+      {{end}}
+
+      {{if .Data.Recent}}
+      <section class="card stack">
+        <h2 class="head">Recent</h2>
+        <div class="tablebox">
+          <table class="table">
+            <thead><tr><th>File</th><th>From</th><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+            {{range .Data.Recent}}<tr><td>{{.FileName}}</td><td>{{.Who}}</td><td>{{template "jobtag" .}}</td><td class="muted">{{clock .UpdatedAt}}</td></tr>{{end}}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {{end}}
+    </div>
+
+    <aside class="side" aria-label="Printer and alerts">
+      <section class="card stack">
+        <span class="small muted">Printer</span>
+        <div class="row between"><span class="big">{{if .Printer}}{{.Printer}}{{else}}None found{{end}}</span>{{template "statuschip" .}}</div>
+        {{if .Status.Detail}}<p class="small">{{.Status.Detail}}</p>{{end}}
+        <dl class="kv">
+          <dt>Windows says</dt><dd>{{.Status.OSSays}}</dd>
+          <dt>Spooler</dt><dd>{{.Status.Spooler}}</dd>
+          <dt>Default paper</dt><dd>A4</dd>
+          <dt>Two-sided</dt><dd>{{if .Data.Settings.AutoDuplex}}Automatic{{else}}Manual flip{{end}}</dd>
+        </dl>
+      </section>
+
+      {{range .Data.Active}}{{if eq .State "awaiting_flip"}}
+      <section class="card flip stack">
+        <span class="fname">Flip needed</span>
+        <span>{{.FileName}}: the fronts are printed. Put the stack back in the tray{{if $.Data.Settings.FlipReverse}} without reordering it{{end}}, then continue.</span>
+        <div class="acts">
+          <form class="inline" method="post" action="/admin/jobs/{{.ID}}/continue"><button class="btn primary" type="submit">Continue</button></form>
+          <form class="inline" method="post" action="/admin/jobs/{{.ID}}/cancel"><button class="btn ghost" type="submit">Cancel job</button></form>
+        </div>
+      </section>
+      {{end}}{{end}}
+
+      <section class="card stack">
+        <span class="small muted">Alerts</span>
+        {{if .Data.Telegram}}
+        <div class="row between"><span class="fname">Telegram</span><span class="tag ok">Connected</span></div>
+        {{if .Data.Links}}<p class="small muted">Another app uses this bot's updates, so buttons open this page instead of approving in Telegram.</p>{{end}}
+        {{else}}
+        <div class="row between"><span class="fname">Telegram</span><span class="tag">Not set up</span></div>
+        <p class="small muted">Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to printty.env.</p>
+        {{end}}
+        <a class="btn ghost" href="/admin/settings">Alert settings</a>
+      </section>
+    </aside>
+  </div>
+</main>
+{{end}}

@@ -18,3 +18,9 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Local secrets and config
+printty.env
+*.env
+!*.env.example
+printty.exe

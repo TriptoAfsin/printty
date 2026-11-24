@@ -1,62 +1,73 @@
 # Design: Printty
 
-The locked system for Printty's web UI. Every Hallmark run reads this first, and all screens share it. Change it on purpose; the file is the rule.
+The locked system for Printty's web UI (client and admin). Every Hallmark run reads this first, and all screens share it. Change it on purpose; the file is the rule.
 
 ## System
-- Genre: modern-minimal
-- Shape: app screen (a tool someone works in, mostly on a phone)
-- Theme: Wayfind (deal 1/3, seed printty-lean-home-print-e18f·5ce6b3eb·2026-11-24·r0), colourway `platform`
-- Axes: light/mono/cool · posture: committed
-- Why Wayfind: Printty is a status board for one printer. Wayfind is public signage: read at a glance, cobalt for what is live, amber for figures.
-
-## Screens
-- Shell: a top bar with the wordmark, the printer's live status, and links to Print and Queue (plus Requests and Settings for the admin, with a count badge on Requests). No sidebar (at most five destinations); on phones the links sit in a bottom tab bar.
-- **Sign in / Accept invite / Guest request**: one narrow column, one form each. The guest form says plainly that the owner must approve the print.
-- **Print**: file picker (drop zone on desktop), then options as native-sized controls: printer, copies, pages, duplex, colour, paper (A4 preselected). Duplex on a manual-only printer reads "Two-sided (you'll flip the stack)". The primary action says what will happen: "Print" for admin and trusted members, "Send request" for everyone else.
-- **Queue** (the signature): a departure-board list of jobs, each row = file name, who sent it, pages, options, state. `held` rows explain why ("Printer off, owner notified 2 min ago"); `pending_approval` rows read "Waiting for approval"; `awaiting_flip` is an ink plate with the flip instruction and a Continue button (admin).
-- **Requests** (admin): incoming requests newest first, each with requester, file, page count, options and a first-page thumbnail; Approve (cobalt) and Reject (outline) on every row. Approve means "the printer is ready".
-- **Users** (admin, inside Settings): members table (name, role, approval policy, last print, active sessions), invite button that shows a link and QR code, guest access toggle with its limits.
-- **Shared file** (arrives from the share sheet): the Print screen with the file already attached, its name and page count on an ink plate, options below, Print as the only action. Cancel discards the draft.
-- **Offline shell** (service worker): wordmark plus "Printty is unreachable. Is the computer on?" and a retry button.
-- PWA chrome: `theme_color` = `--color-ink`, `background_color` = `--color-paper`; icon is the wordmark on an ink plate, square, maskable safe zone respected. Standalone display; the top bar respects `env(safe-area-inset-top)`.
-- **Settings** (admin): printers (with the manual-duplex calibration print), notifications (Telegram/push/email test buttons), users, limits.
-- States on every data region: loading (skeleton rows), empty (what goes here + the action that fills it), error (what broke + what to do), full.
+- Genre: atmospheric (theme default), used as a calm app screen
+- Shape: app screen: a tool someone works in, mostly on a phone (client) and a laptop (admin)
+- Theme: Ribbon (chosen 2026-11-24 over Ultraviolet, after Wayfind, Terrazzo and Darkroom were rejected as too square)
+- Axes: light/grotesk-sans/chromatic-teal · posture: committed
+- Modes: **light + dark**, parity per Hallmark `dark-mode.md`. Light = Ribbon `dawn`; dark = blue-black, re-derived, same teal hue.
+- Feel: modern, elegant, rounded. Nothing square: pills for controls, 22px cards, 36px phone screens.
+- Approved mock-up: the "Ribbon" rows of the Printty UI mock-ups canvas; its stylesheet is kept as `docs/mockup-reference.css` (`.app.rb` blocks).
 
 ## Tokens
-`internal/web/static/tokens.css` is the source of truth. The roles:
+`internal/web/static/tokens.css` is the source of truth: Ribbon's scaffold block, then Printty's additions, then the dark block. The roles:
 ```css
 :root {
-  --color-paper: oklch(95.5% 0.006 250);  --color-paper-2: oklch(91% 0.009 250);  --color-paper-3: oklch(99.5% 0.005 250);
-  --color-ink: oklch(16% 0.014 262);  --color-ink-2: oklch(29% 0.014 262);  --color-muted: oklch(47% 0.016 260);  --color-rule: oklch(80% 0.011 250);
-  --color-accent: oklch(51% 0.22 264);  --color-accent-2: oklch(81% 0.16 82);  --color-accent-ink: oklch(99.5% 0.003 250);  --color-focus: oklch(51% 0.22 264);
-  --color-error: oklch(52% 0.19 27);  --color-success: oklch(50% 0.12 150);
-  --font-display: "Chivo Mono", ui-monospace, monospace;  --font-body: var(--font-display);
-  --radius-card: 0;  --radius-pill: 999px;  --rule-hair: 1px;  --rule-bar: 2px;
+  --color-paper: oklch(98.2% 0.008 82);  --color-paper-2: oklch(95.8% 0.011 82);  --color-paper-3: oklch(92.3% 0.014 82);  --color-raised: oklch(99.7% 0.004 85);
+  --color-ink: oklch(18% 0.006 80);  --color-ink-2: oklch(30% 0.008 80);  --color-muted: oklch(47% 0.012 80);
+  --color-rule: oklch(89.5% 0.011 82);  --color-ring: oklch(80% 0.012 82);
+  --color-accent: oklch(44% 0.075 190);  --color-accent-deep: oklch(38% 0.07 190);  --color-accent-soft: oklch(92% 0.028 190);
+  --color-accent-ink: oklch(98% 0.006 85);  --color-on-soft: oklch(34% 0.06 190);  --color-focus: oklch(52% 0.09 190);
+  --color-warn / --color-warn-soft, --color-ok / --color-ok-soft, --color-error
+  --font-display: "Instrument Sans";  --font-body: "Figtree";  --font-outlier: "JetBrains Mono";
+  --radius-screen: 36px;  --radius-card: 22px;  --radius-inner: 14px;  --radius-pill: 999px;
 }
+[data-mode="dark"] { paper 15% / paper-2 18.5% / paper-3 22% / raised 25% (hue 230), ink 94%, accent oklch(74% 0.085 190) with dark text, shadows replaced by a 1px inset ring, body weight 350 }
 ```
-The spacing scale, type scale (ratio 1.2), easings and durations come from the scaffold and live in `tokens.css`. `base.css` holds the Floor's base rules.
+Spacing, type scale (1.2), easings and durations come from the scaffold. `base.css` holds the Floor's base rules.
 
-## Colour roles
-- Cobalt (`--color-accent`): the primary action, the current selection, a printer that is live. Nothing else.
-- Amber (`--color-accent-2`): figures on ink plates (page counts, copies, queue position).
-- `--color-error`: printer off / job failed. `--color-success`: printed.
-- Status is never colour alone: every state has a word.
+## Mode switching
+- Default follows the OS (`prefers-color-scheme`). A sun/moon button in the top bar sets `data-mode` on `<html>` and stores it in `localStorage`; a 4-line inline script in `<head>` applies it before first paint (no flash).
+- PWA `theme_color` is set per mode with two `<meta name="theme-color" media="(prefers-color-scheme: …)">` tags.
+
+## Surfaces
+- Cards: `--color-raised`, `--radius-card`, soft `--shadow-card` in light; in dark, cards are lighter than the ground with a 1px inset ring, never a drop shadow.
+- Grouped choices: a `--color-paper-2` pill track; the chosen option is a raised pill (`--color-raised` + `--shadow-card`).
+- Notes and the flip prompt: `--color-accent-soft` with `--color-on-soft` text, `--radius-inner`.
+- Status tags (pills, always with a word): waiting/printing = accent-soft; held/printer off = warn-soft; printed = ok-soft; neutral = paper-2.
+- Progress: a 6px pill track in accent-soft with an accent fill.
+- No textures, no gradients, no machined parts or faders from the full Ribbon theme: Printty takes its palette, faces, radii and calm only.
+
+## Screens
+- Phone shell: wordmark top left, printer status chip top right (`Printer ready` in ok-soft, `Printer off` in warn-soft), floating pill tab bar at the bottom (Print, Queue).
+- **Sign in**: username, password, Sign in; "or"; Ask as a guest (ghost); invite hint at the foot.
+- **Print**: file card with a page thumbnail; copies stepper and pages; sides ("Two-sided is a manual flip"); colour; paper (A4 preselected); approval note; Send request (or Print for admin/trusted).
+- **Queue** (client): one card per job: name, status tag, one line of detail; progress bar while printing.
+- Admin shell: top bar with wordmark, pill nav (Requests with a count badge, Queue, Users, Settings), mode toggle, avatar.
+- **Requests** (admin, the signature): one card per request: first-page thumbnail, requester + role tag + time, file, guest note in italics, setting tags, Reject (ghost) and Approve (primary).
+- Admin side column: printer card (Windows status vs spooler, default paper, two-sided mode), flip-needed card, alerts card with switches and Send a test.
+- **Users**: card with a table (avatar, name, role, approval policy, last print), Invite someone, guest-requests switch.
+- Still to design: Accept invite, Guest request form, Settings, offline shell, shared-file landing, empty/loading/error states.
+- States on every data region: loading (skeleton cards), empty (what goes here + the one action), error (what broke + what to do), full.
 
 ## Controls
-- Primary: cobalt fill, `--color-accent-ink` text · radius 0 · 44px tall (phone first)
-- Secondary: 2px ink outline · same radius and height
-- Segmented controls for duplex, colour and paper (each is a short closed set); steppers for copies.
-- Every control: default, hover, focus-visible, active, disabled, loading, error, success.
+- Primary: accent fill, `--color-accent-ink` label, pill, 44px (54px full-width on phones); hover `--color-accent-deep`.
+- Secondary (ghost): transparent with a 1.5px inset `--color-ring`, ink on hover.
+- Inputs: pill, 52px, 1.5px inset ring, raised fill. Switches: 46×28 pill, accent when on, `role="switch"`.
+- Every control: default, hover, focus-visible (2px `--color-focus` ring, offset 2px), active, disabled, loading, error, success. Touch targets ≥ 44px.
 
 ## Type
-- Chivo Mono throughout, embedded in the binary (SIL OFL). No requests to font CDNs; the UI works offline.
+- Instrument Sans 500 for headings (tracking −0.035em, sentence case); Figtree for everything else (400 light, 350 dark); JetBrains Mono only for codes if ever needed.
+- All three fonts embedded in the binary (SIL OFL). No requests to font CDNs; the UI works offline.
 - Body 16px minimum; tabular numerals for counts and times.
 
 ## Motion
-- Character: severe. State changes only (`--dur-micro`, `--dur-short`); no reveals. Under reduced motion everything ends at once.
+- Character: calm. Colour and background changes over `--dur-micro`; switch knob over `--dur-short`. No reveals. Under reduced motion everything ends at once.
 
 ## Floor (never waived)
-Tokens for every colour and font · no `transition: all` · `:focus-visible` on every control · `overflow-x: clip` on html and body · no tracked-caps labels or eyebrows · no invented figures · content visible without JS where possible.
+Tokens for every colour and font · no `transition: all` · `:focus-visible` on every control · `overflow-x: clip` on html and body · no tracked-caps labels or eyebrows · no middle-dot meta strings · no invented figures · content readable without JS where possible.
 
 ## Exports
-`internal/web/static/tokens.css` and `internal/web/static/base.css`.
+`internal/web/static/tokens.css` and `internal/web/static/base.css`; mock-up stylesheet for reference in `docs/mockup-reference.css`.

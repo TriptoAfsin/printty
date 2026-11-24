@@ -1,0 +1,45 @@
+{{define "content"}}
+<main class="wrap wide">
+  {{template "messages" .}}
+  <h1 class="head">Settings</h1>
+  <div class="cols">
+    <form class="main stack" method="post" action="/admin/settings">
+      <section class="card stack">
+        <h2 class="head">Printer</h2>
+        <label class="field"><span class="label">Use this printer</span>
+          <select class="input" name="printer">
+            <option value="" {{if not .Data.Settings.Printer}}selected{{end}}>Windows default ({{.Data.Current}})</option>
+            {{range .Data.Printers}}<option value="{{.Name}}" {{if eq .Name $.Data.Settings.Printer}}selected{{end}}>{{.Name}}</option>{{end}}
+          </select>
+        </label>
+        <div class="switchrow"><div><div class="fname">Automatic two-sided</div><div class="small muted">Only if the printer has a duplex unit. The Canon G1010 doesn't.</div></div><label class="switch"><input type="checkbox" name="autoDuplex" {{if .Data.Settings.AutoDuplex}}checked{{end}} aria-label="Automatic two-sided"><span></span></label></div>
+        <div class="switchrow"><div><div class="fname">Print backs last page first</div><div class="small muted">For manual flips. Turn off if the backs come out in the wrong order.</div></div><label class="switch"><input type="checkbox" name="flipReverse" {{if .Data.Settings.FlipReverse}}checked{{end}} aria-label="Print backs last page first"><span></span></label></div>
+      </section>
+
+      <section class="card stack">
+        <h2 class="head">Guests</h2>
+        <div class="switchrow"><div><div class="fname">Guest requests</div><div class="small muted">Anyone on the network can ask with their name. You approve every one.</div></div><label class="switch"><input type="checkbox" name="guests" {{if .Data.Settings.GuestsEnabled}}checked{{end}} aria-label="Guest requests"><span></span></label></div>
+        <div class="grid2">
+          <label class="field"><span class="label">Requests per hour</span><input class="input" type="number" name="guestPerHour" min="1" max="50" value="{{.Data.Settings.GuestPerHour}}"></label>
+          <label class="field"><span class="label">Pages per request</span><input class="input" type="number" name="guestMaxPages" min="1" max="500" value="{{.Data.Settings.GuestMaxPages}}"></label>
+        </div>
+        <label class="field"><span class="label">Requests expire after (hours)</span><input class="input small-input" type="number" name="requestTTLHours" min="1" max="168" value="{{.Data.Settings.RequestTTLHours}}"></label>
+      </section>
+
+      <section class="card stack">
+        <h2 class="head">Alerts</h2>
+        <div class="switchrow"><div><div class="fname">Telegram alerts</div><div class="small muted">{{if .Data.Telegram}}Bot connected.{{else}}Not set up: add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to printty.env and restart.{{end}}</div></div><label class="switch"><input type="checkbox" name="notifyTelegram" {{if .Data.Settings.NotifyTelegram}}checked{{end}} aria-label="Telegram alerts"><span></span></label></div>
+        <div class="switchrow"><div><div class="fname">Tell me about every print</div><div class="small muted">Also message when trusted people print, so you can switch the printer on.</div></div><label class="switch"><input type="checkbox" name="notifyIncoming" {{if .Data.Settings.NotifyIncoming}}checked{{end}} aria-label="Tell me about every print"><span></span></label></div>
+      </section>
+      <button class="btn primary lg" type="submit">Save settings</button>
+    </form>
+    <aside class="side">
+      <section class="card stack">
+        <span class="fname">Test alerts</span>
+        <p class="small muted">Sends a message to the Telegram chat{{if .Data.Links}}. Buttons will open this site, because another app uses this bot's updates{{end}}.</p>
+        <form method="post" action="/admin/test-alert"><button class="btn ghost" type="submit">Send a test</button></form>
+      </section>
+    </aside>
+  </div>
+</main>
+{{end}}

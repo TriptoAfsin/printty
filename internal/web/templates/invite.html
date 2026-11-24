@@ -1,0 +1,25 @@
+{{define "content"}}
+<main class="auth">
+  <img class="mascot" src="/static/icon.svg" alt="">
+  {{if .Data.Valid}}
+  <div>
+    <h1 class="head">You're invited</h1>
+    <p class="lead">Make an account to print on the home printer. The owner approves your prints.</p>
+  </div>
+  {{template "messages" .}}
+  <form class="stack" method="post" action="/invite/{{.Data.Token}}">
+    <label class="field"><span class="label">Your name</span><input class="input" name="name" autocomplete="name" value="{{.Data.Name}}" required></label>
+    <label class="field"><span class="label">Username</span><input class="input" name="username" autocomplete="username" autocapitalize="none" value="{{.Data.Username}}" required></label>
+    <label class="field"><span class="label">Password <span class="muted">8 characters or more</span></span><input class="input" type="password" name="password" autocomplete="new-password" minlength="8" required></label>
+    <label class="field"><span class="label">Password again</span><input class="input" type="password" name="password2" autocomplete="new-password" minlength="8" required></label>
+    <button class="btn primary lg" type="submit" data-busy="Creating…">Create account</button>
+  </form>
+  {{else}}
+  <div>
+    <h1 class="head">This invite has expired</h1>
+    <p class="lead">Invites work once and last 7 days. Ask the owner for a new link.</p>
+  </div>
+  <a class="btn ghost lg" href="/login">Sign in instead</a>
+  {{end}}
+</main>
+{{end}}
