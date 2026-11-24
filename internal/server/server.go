@@ -103,6 +103,9 @@ func (s *Server) parseTemplates() error {
 				return ""
 			}
 			if time.Since(t) < 20*time.Hour {
+				if s.st.Settings().Clock12 {
+					return t.Format("3:04 PM")
+				}
 				return t.Format("15:04")
 			}
 			if time.Since(t) < 44*time.Hour {

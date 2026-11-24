@@ -214,6 +214,7 @@ func (s *Server) postSettings(w http.ResponseWriter, r *http.Request, v viewer) 
 		x.NotifyTelegram = r.FormValue("notifyTelegram") == "on"
 		x.NotifyIncoming = r.FormValue("notifyIncoming") == "on"
 		x.DesktopOff = r.FormValue("desktop") != "on"
+		x.Clock12 = r.FormValue("clock") == "12"
 	})
 	back(w, r, "/admin/settings", "Settings saved.")
 }

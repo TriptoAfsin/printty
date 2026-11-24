@@ -117,6 +117,7 @@ type Settings struct {
 	NotifyTelegram   bool   `json:"notifyTelegram"`
 	NotifyIncoming   bool   `json:"notifyIncoming"`
 	DesktopOff       bool   `json:"desktopOff,omitempty"` // no Windows notifications on this PC
+	Clock12          bool   `json:"clock12,omitempty"`    // show times as 9:01 PM instead of 21:01
 	KeepHistoryHours int    `json:"keepHistoryHours"`
 }
 

@@ -28,6 +28,16 @@
       </section>
 
       <section class="card stack">
+        <h2 class="head">Display</h2>
+        <div class="field"><span class="label">Time format</span>
+          <div class="seg" role="radiogroup" aria-label="Time format">
+            <label><input type="radio" name="clock" value="24" {{if not .Data.Settings.Clock12}}checked{{end}}>24-hour (21:05)</label>
+            <label><input type="radio" name="clock" value="12" {{if .Data.Settings.Clock12}}checked{{end}}>12-hour (9:05 PM)</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card stack">
         <h2 class="head">Alerts</h2>
         <div class="switchrow"><div><div class="fname">Telegram alerts</div><div class="small muted">{{if .Data.Telegram}}Bot connected.{{else}}Not set up: add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to printty.env and restart.{{end}}</div></div><label class="switch"><input type="checkbox" name="notifyTelegram" {{if .Data.Settings.NotifyTelegram}}checked{{end}} aria-label="Telegram alerts"><span></span></label></div>
         <div class="switchrow"><div><div class="fname">Notifications on this PC</div><div class="small muted">Windows notifications from the tray icon, next to Telegram. Click one to open Requests.</div></div><label class="switch"><input type="checkbox" name="desktop" {{if not .Data.Settings.DesktopOff}}checked{{end}} aria-label="Notifications on this PC"><span></span></label></div>
