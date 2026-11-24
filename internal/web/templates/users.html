@@ -5,12 +5,15 @@
     <div class="main">
       <div class="row between">
         <h1 class="head">Users</h1>
-        <form class="inline" method="post" action="/admin/invites"><button class="btn primary" type="submit">Invite someone</button></form>
+        <form class="invite-form" method="post" action="/admin/invites">
+          <label class="check"><input type="checkbox" name="approval" value="1"> Their prints need my approval</label>
+          <button class="btn primary" type="submit">Invite someone</button>
+        </form>
       </div>
       {{if .Data.NewLink}}
       <section class="card flip stack">
         <span class="fname">Invite link ready</span>
-        <span class="small">Send this to one person. It works once and lasts 7 days.</span>
+        <span class="small">Send this to one person. It works once and lasts 7 days. {{if .Data.NewNeedsApproval}}Their prints will wait for your approval.{{else}}They'll print directly, without waiting for approval.{{end}}</span>
         <div class="copy"><input class="input" id="invite" value="{{.Data.NewLink}}" readonly aria-label="Invite link"><button class="btn primary" type="button" data-copy="invite">Copy</button></div>
       </section>
       {{end}}
@@ -23,16 +26,16 @@
             <tr>
               <td><span class="person"><span class="avatar">{{initial .Name}}</span>{{.Name}}{{if .Disabled}} <span class="tag held">No access</span>{{end}}</span></td>
               <td>{{if eq .Role "admin"}}Admin{{else}}Member{{end}}</td>
-              <td>{{if eq .Role "admin"}}Prints directly{{else if .Trusted}}Trusted{{else}}Needs approval{{end}}</td>
+              <td>{{if eq .Role "admin"}}Prints directly{{else if .Trusted}}Prints directly{{else}}<span class="tag">Needs approval</span>{{end}}</td>
               <td class="muted">{{if .LastPrint.IsZero}}Never{{else}}{{clock .LastPrint}}{{end}}</td>
               <td>{{.Sessions}}</td>
               <td>
                 {{if ne .Role "admin"}}
-                <div class="acts">
-                  {{if .Trusted}}<form class="inline" method="post" action="/admin/users/{{.ID}}/untrust"><button class="btn quiet" type="submit">Require approval</button></form>
-                  {{else}}<form class="inline" method="post" action="/admin/users/{{.ID}}/trust"><button class="btn quiet" type="submit">Trust</button></form>{{end}}
-                  {{if .Disabled}}<form class="inline" method="post" action="/admin/users/{{.ID}}/enable"><button class="btn quiet" type="submit">Restore</button></form>
-                  {{else}}<form class="inline" method="post" action="/admin/users/{{.ID}}/disable"><button class="btn quiet" type="submit">Remove access</button></form>{{end}}
+                <div class="acts end">
+                  {{if .Trusted}}<form class="inline" method="post" action="/admin/users/{{.ID}}/untrust"><button class="btn ghost sm" type="submit">Require approval</button></form>
+                  {{else}}<form class="inline" method="post" action="/admin/users/{{.ID}}/trust"><button class="btn ghost sm" type="submit">Let them print directly</button></form>{{end}}
+                  {{if .Disabled}}<form class="inline" method="post" action="/admin/users/{{.ID}}/enable"><button class="btn ghost sm" type="submit">Restore access</button></form>
+                  {{else}}<form class="inline" method="post" action="/admin/users/{{.ID}}/disable" data-confirm="Remove {{.Name}}'s access?" data-confirm-detail="They're signed out on every device and can't print. You can restore it later." data-confirm-ok="Remove access"><button class="btn danger-ghost sm" type="submit">Remove access</button></form>{{end}}
                 </div>
                 {{end}}
               </td>

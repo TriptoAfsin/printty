@@ -37,6 +37,8 @@ type Config struct {
 	State func() (tip string, on bool) // tooltip, and whether to show the icon in colour
 	Menu  func() []Item
 	Every time.Duration // how often to refresh State (0: never)
+	// OnNotifyClick runs when someone clicks a notification from Notify.
+	OnNotifyClick func()
 }
 
 var (
@@ -93,6 +95,8 @@ const (
 	wmApp         = 0x8000
 	wmTray        = wmApp + 1
 	wmBalloon     = wmApp + 2
+
+	ninBalloonUserClick = 0x0405
 
 	nimAdd    = 0
 	nimModify = 1
@@ -390,6 +394,10 @@ func wndProc(hwnd, message, wparam, lparam uintptr) uintptr {
 		switch uint32(lparam) {
 		case wmLButtonUp:
 			t.defaultAction()
+		case ninBalloonUserClick:
+			if t.cfg.OnNotifyClick != nil {
+				go t.cfg.OnNotifyClick()
+			}
 		case wmRButtonUp, wmContextMenu:
 			var pt struct{ X, Y int32 }
 			pGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))

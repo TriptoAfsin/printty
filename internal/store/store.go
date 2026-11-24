@@ -49,6 +49,9 @@ type Invite struct {
 	Note      string    `json:"note"`
 	Expires   time.Time `json:"expires"`
 	UsedBy    string    `json:"usedBy,omitempty"`
+	// NeedsApproval: the member's prints wait for the owner. Off by default:
+	// invited people print directly; guests always need approval.
+	NeedsApproval bool `json:"needsApproval,omitempty"`
 }
 
 type JobState string
@@ -113,6 +116,7 @@ type Settings struct {
 	AutoDuplex       bool   `json:"autoDuplex"` // printer has a duplex unit
 	NotifyTelegram   bool   `json:"notifyTelegram"`
 	NotifyIncoming   bool   `json:"notifyIncoming"`
+	DesktopOff       bool   `json:"desktopOff,omitempty"` // no Windows notifications on this PC
 	KeepHistoryHours int    `json:"keepHistoryHours"`
 }
 
@@ -363,16 +367,16 @@ func (st *Store) ValidInvite(tokenHash string) bool {
 	return false
 }
 
-func (st *Store) UseInvite(tokenHash, userID string) error {
+func (st *Store) UseInvite(tokenHash, userID string) (Invite, error) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	for _, inv := range st.s.Invites {
 		if inv.TokenHash == tokenHash && inv.UsedBy == "" && time.Now().Before(inv.Expires) {
 			inv.UsedBy = userID
-			return st.saveLocked()
+			return *inv, st.saveLocked()
 		}
 	}
-	return ErrNotFound
+	return Invite{}, ErrNotFound
 }
 
 func (st *Store) PendingInvites() []Invite {

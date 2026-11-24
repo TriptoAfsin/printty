@@ -18,6 +18,8 @@ type Runtime struct {
 	DataDir string
 	Addr    string
 	Stop    func() // shuts this process down gracefully
+	Version string
+	Started time.Time
 }
 
 func (s *Server) SetRuntime(rt Runtime) { s.rt = rt }

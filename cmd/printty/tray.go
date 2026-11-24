@@ -2,18 +2,22 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"time"
 
 	"github.com/TriptoAfsin/printty/internal/config"
 	"github.com/TriptoAfsin/printty/internal/memtrim"
 	"github.com/TriptoAfsin/printty/internal/netinfo"
+	"github.com/TriptoAfsin/printty/internal/queue"
 	"github.com/TriptoAfsin/printty/internal/service"
 	"github.com/TriptoAfsin/printty/internal/tray"
 	"github.com/TriptoAfsin/printty/internal/web"
@@ -52,7 +56,7 @@ func copyItem(cfg config.Config) tray.Item {
 
 // startTray shows the icon for a copy of Printty started by hand or at sign-in.
 // Exit stops this process.
-func startTray(ctx context.Context, cfg config.Config, mode string, stop func()) {
+func startTray(ctx context.Context, cfg config.Config, mode string, stop func(), alerts alertSource) {
 	if !tray.Supported {
 		return
 	}
@@ -61,14 +65,16 @@ func startTray(ctx context.Context, cfg config.Config, mode string, stop func())
 	if mode == "background" {
 		how = "Running in the background"
 	}
-	_, err := tray.Start(ctx, tray.Config{
-		Icon:  trayIcon(),
-		State: func() (string, bool) { return "Printty: running\n" + local, true },
+	t, err := tray.Start(ctx, tray.Config{
+		Icon:          trayIcon(),
+		State:         func() (string, bool) { return "Printty " + version + ": running\n" + local, true },
+		OnNotifyClick: func() { tray.Open(local + "/admin") },
 		Menu: func() []tray.Item {
 			items := []tray.Item{
-				{Label: "Printty · " + how, Disabled: true},
+				{Label: "Printty " + version + " · " + how, Disabled: true},
 				{Label: "Open Printty", Default: true, Do: func() { tray.Open(local + "/admin") }},
 				copyItem(cfg),
+				{Label: "About Printty", Do: func() { tray.Open(local + "/admin/about") }},
 			}
 			if mode == "background" {
 				items = append(items, tray.Item{Label: "Show log", Do: func() { tray.Open(filepath.Join(cfg.DataDir, "printty.log")) }})
@@ -78,6 +84,47 @@ func startTray(ctx context.Context, cfg config.Config, mode string, stop func())
 	})
 	if err != nil {
 		slog.Warn("no tray icon", "err", err)
+		return
+	}
+	go showAlerts(ctx, t, 3*time.Second, func(since uint64) (uint64, []queue.DesktopAlert, error) {
+		seq, a := alerts.DesktopAlerts(since)
+		return seq, a, nil
+	})
+}
+
+type alertSource interface {
+	DesktopAlerts(since uint64) (uint64, []queue.DesktopAlert)
+}
+
+// showAlerts turns new desktop alerts into Windows notifications. The first
+// fetch only finds where to start, so old alerts aren't replayed.
+func showAlerts(ctx context.Context, t *tray.Tray, every time.Duration, fetch func(since uint64) (uint64, []queue.DesktopAlert, error)) {
+	var since uint64
+	started := false
+	tick := time.NewTicker(every)
+	defer tick.Stop()
+	for {
+		seq, alerts, err := fetch(since)
+		if err == nil {
+			if seq < since { // Printty restarted: its numbering starts again
+				since, started = 0, false
+				continue
+			}
+			if started && len(alerts) == 1 {
+				t.Notify(alerts[0].Title, alerts[0].Text)
+			} else if started && len(alerts) > 1 {
+				last := alerts[len(alerts)-1]
+				t.Notify(fmt.Sprintf("%d new alerts", len(alerts)), last.Title+": "+last.Text)
+			}
+			since, started = seq, true
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.Done():
+			return
+		case <-tick.C:
+		}
 	}
 }
 
@@ -127,8 +174,9 @@ func trayCmd(args []string) int {
 
 	var err error
 	t, err = tray.Start(ctx, tray.Config{
-		Icon:  trayIcon(),
-		Every: 5 * time.Second,
+		Icon:          trayIcon(),
+		Every:         5 * time.Second,
+		OnNotifyClick: func() { tray.Open(local + "/admin") },
 		State: func() (string, bool) {
 			st := service.Status()
 			if !st.Installed {
@@ -142,16 +190,17 @@ func trayCmd(args []string) int {
 		Menu: func() []tray.Item {
 			if !service.Status().Running {
 				return []tray.Item{
-					{Label: "Printty is stopped", Disabled: true},
+					{Label: "Printty " + version + " is stopped", Disabled: true},
 					{Label: "Start Printty", Default: true, Do: func() { control("start") }},
 					{},
 					{Label: "Hide this icon", Do: quit},
 				}
 			}
 			return []tray.Item{
-				{Label: "Printty · Running as a Windows service", Disabled: true},
+				{Label: "Printty " + version + " · Running as a Windows service", Disabled: true},
 				{Label: "Open Printty", Default: true, Do: func() { tray.Open(local + "/admin") }},
 				copyItem(cfg),
+				{Label: "About Printty", Do: func() { tray.Open(local + "/admin/about") }},
 				{},
 				{Label: "Restart Printty", Do: func() { control("restart") }},
 				{Label: "Stop Printty", Do: func() { control("stop") }},
@@ -170,6 +219,26 @@ func trayCmd(args []string) int {
 		time.Sleep(10 * time.Second)
 		memtrim.Now()
 	}()
+	// New requests from the service, shown as Windows notifications.
+	client := &http.Client{Timeout: 3 * time.Second}
+	_, port, _ := net.SplitHostPort(cfg.Addr)
+	api := "http://" + net.JoinHostPort("127.0.0.1", port) + "/api/local/alerts?since="
+	go showAlerts(ctx, t, 5*time.Second, func(since uint64) (uint64, []queue.DesktopAlert, error) {
+		resp, err := client.Get(api + strconv.FormatUint(since, 10))
+		if err != nil {
+			return 0, nil, err
+		}
+		defer resp.Body.Close()
+		var body struct {
+			Seq    uint64               `json:"seq"`
+			Alerts []queue.DesktopAlert `json:"alerts"`
+		}
+		if resp.StatusCode != http.StatusOK {
+			return 0, nil, fmt.Errorf("status %d", resp.StatusCode)
+		}
+		err = json.NewDecoder(resp.Body).Decode(&body)
+		return body.Seq, body.Alerts, err
+	})
 	<-t.Done()
 	return 0
 }

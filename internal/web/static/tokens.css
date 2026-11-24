@@ -37,6 +37,7 @@
   --radius-screen: 24px; --radius-card: 14px; --radius-inner: 10px;
   --radius-control: 10px; --radius-control-in: 7px;           /* buttons, inputs, segmented controls; their inner parts */
   --shadow-card: 0 1px 0 oklch(20% 0.01 80 / 0.05), 0 14px 32px -14px oklch(20% 0.02 80 / 0.2);
+  --color-error-ink: oklch(99% 0.004 85);              /* text on the red confirm button */
   --body-weight: 400; --head-weight: 500;
 }
 
@@ -50,7 +51,7 @@
   --color-accent-ink: oklch(17% 0.025 210); --color-on-soft: oklch(86% 0.06 190); --color-focus: oklch(78% 0.09 190);
   --color-warn: oklch(84% 0.1 78); --color-warn-soft: oklch(30% 0.05 70);
   --color-ok: oklch(82% 0.09 155); --color-ok-soft: oklch(28% 0.04 155);
-  --color-error: oklch(74% 0.13 27); --color-success: oklch(82% 0.09 155);
+  --color-error: oklch(74% 0.13 27); --color-success: oklch(82% 0.09 155); --color-error-ink: oklch(18% 0.03 27);
   --shadow-card: inset 0 0 0 1px var(--color-rule);
   --body-weight: 350;
 }
@@ -64,7 +65,7 @@
     --color-accent-ink: oklch(17% 0.025 210); --color-on-soft: oklch(86% 0.06 190); --color-focus: oklch(78% 0.09 190);
     --color-warn: oklch(84% 0.1 78); --color-warn-soft: oklch(30% 0.05 70);
     --color-ok: oklch(82% 0.09 155); --color-ok-soft: oklch(28% 0.04 155);
-    --color-error: oklch(74% 0.13 27); --color-success: oklch(82% 0.09 155);
+    --color-error: oklch(74% 0.13 27); --color-success: oklch(82% 0.09 155); --color-error-ink: oklch(18% 0.03 27);
     --shadow-card: inset 0 0 0 1px var(--color-rule);
     --body-weight: 350;
   }

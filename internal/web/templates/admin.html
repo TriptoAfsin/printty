@@ -9,7 +9,7 @@
         <span>The fronts are printed. Put the stack back in the tray{{if $.Data.Settings.FlipReverse}} without reordering it{{end}}, then continue.</span>
         <div class="acts">
           <form class="inline" method="post" action="/admin/jobs/{{.ID}}/continue"><button class="btn primary" type="submit">Continue</button></form>
-          <form class="inline" method="post" action="/admin/jobs/{{.ID}}/cancel"><button class="btn ghost" type="submit">Cancel job</button></form>
+          <form class="inline" method="post" action="/admin/jobs/{{.ID}}/cancel" data-confirm="Cancel this print?" data-confirm-detail="{{.FileName}} won't print. The person who sent it sees it as canceled." data-confirm-ok="Cancel print"><button class="btn ghost" type="submit">Cancel job</button></form>
         </div>
       </section>
       {{end}}{{end}}
@@ -34,7 +34,7 @@
             </div>
           </div>
           <div class="acts">
-            <form class="inline" method="post" action="/admin/jobs/{{.ID}}/reject"><button class="btn ghost" type="submit">Reject</button></form>
+            <form class="inline" method="post" action="/admin/jobs/{{.ID}}/reject" data-confirm="Reject this request?" data-confirm-detail="{{.FileName}} from {{.Who}} won't print, and the file is deleted." data-confirm-ok="Reject"><button class="btn ghost" type="submit">Reject</button></form>
             <form class="inline" method="post" action="/admin/jobs/{{.ID}}/approve"><button class="btn primary" type="submit">Approve</button></form>
           </div>
         </article>
@@ -54,7 +54,7 @@
           <div class="row between"><span class="fname">{{.FileName}}</span>{{template "jobtag" .}}</div>
           <span class="small muted">{{.Who}}: {{template "jobmeta" .}}</span>
           {{if .Reason}}<span class="small">{{.Reason}}</span>{{end}}
-          {{if not .Spooled}}{{if ne .State "awaiting_flip"}}<form class="inline" method="post" action="/admin/jobs/{{.ID}}/cancel"><button class="btn quiet" type="submit">Cancel</button></form>{{end}}{{end}}
+          {{if not .Spooled}}{{if ne .State "awaiting_flip"}}<form class="inline" method="post" action="/admin/jobs/{{.ID}}/cancel" data-confirm="Cancel this print?" data-confirm-detail="{{.FileName}} won't print. The person who sent it sees it as canceled." data-confirm-ok="Cancel print"><button class="btn quiet" type="submit">Cancel</button></form>{{end}}{{end}}
         </article>
         {{end}}
       </section>

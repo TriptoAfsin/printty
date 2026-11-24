@@ -21,10 +21,11 @@ type Item struct {
 }
 
 type Config struct {
-	Icon  []byte
-	State func() (tip string, on bool)
-	Menu  func() []Item
-	Every time.Duration
+	Icon          []byte
+	State         func() (tip string, on bool)
+	Menu          func() []Item
+	Every         time.Duration
+	OnNotifyClick func()
 }
 
 type Tray struct{}

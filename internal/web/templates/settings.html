@@ -30,7 +30,8 @@
       <section class="card stack">
         <h2 class="head">Alerts</h2>
         <div class="switchrow"><div><div class="fname">Telegram alerts</div><div class="small muted">{{if .Data.Telegram}}Bot connected.{{else}}Not set up: add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to printty.env and restart.{{end}}</div></div><label class="switch"><input type="checkbox" name="notifyTelegram" {{if .Data.Settings.NotifyTelegram}}checked{{end}} aria-label="Telegram alerts"><span></span></label></div>
-        <div class="switchrow"><div><div class="fname">Tell me about every print</div><div class="small muted">Also message when trusted people print, so you can switch the printer on.</div></div><label class="switch"><input type="checkbox" name="notifyIncoming" {{if .Data.Settings.NotifyIncoming}}checked{{end}} aria-label="Tell me about every print"><span></span></label></div>
+        <div class="switchrow"><div><div class="fname">Notifications on this PC</div><div class="small muted">Windows notifications from the tray icon, next to Telegram. Click one to open Requests.</div></div><label class="switch"><input type="checkbox" name="desktop" {{if not .Data.Settings.DesktopOff}}checked{{end}} aria-label="Notifications on this PC"><span></span></label></div>
+        <div class="switchrow"><div><div class="fname">Tell me about every print</div><div class="small muted">Also notify when people who print directly send something, so you can switch the printer on.</div></div><label class="switch"><input type="checkbox" name="notifyIncoming" {{if .Data.Settings.NotifyIncoming}}checked{{end}} aria-label="Tell me about every print"><span></span></label></div>
       </section>
       <button class="btn primary lg" type="submit">Save settings</button>
     </form>
@@ -42,7 +43,7 @@
         {{if eq .Mode "service"}}
         <div class="row between"><span>Windows service</span><span class="tag ok">On</span></div>
         <p class="small muted">Printty starts when the PC boots, before anyone signs in, and restarts itself if it stops.</p>
-        <form method="post" action="/admin/service/remove"><button class="btn ghost" type="submit">Remove the service</button></form>
+        <form method="post" action="/admin/service/remove" data-confirm="Remove the Windows service?" data-confirm-detail="Printty stops now and won't start with Windows. Phones can't print until you open printty.exe again." data-confirm-ok="Remove service"><button class="btn ghost" type="submit">Remove the service</button></form>
         {{else}}
         <p class="small muted">Right now Printty runs only while it's open on this PC.</p>
         <form class="stack" method="post" action="/admin/service/install">
@@ -57,6 +58,11 @@
         {{end}}
       </section>
       {{end}}{{end}}
+      <section class="card stack">
+        <div class="row between"><span class="fname">About</span><span class="tag">Printty {{.Data.Version}}</span></div>
+        <p class="small muted">Version, how it's running, and where it keeps its files.</p>
+        <a class="btn ghost" href="/admin/about">Details</a>
+      </section>
       <section class="card stack">
         <span class="fname">Test alerts</span>
         <p class="small muted">Sends a message to the Telegram chat{{if .Data.Links}}. Buttons will open this site, because another app uses this bot's updates{{end}}.</p>

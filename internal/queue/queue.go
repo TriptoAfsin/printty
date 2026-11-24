@@ -31,6 +31,45 @@ type Queue struct {
 	status     printer.Status
 	statusAt   time.Time
 	offlineMsg time.Time // last "printer is off" alert
+
+	deskMu  sync.Mutex
+	deskSeq uint64
+	desk    []DesktopAlert // the last few, for the tray icon to show
+}
+
+// DesktopAlert is a Windows notification shown by the tray icon.
+type DesktopAlert struct {
+	Seq   uint64 `json:"seq"`
+	Title string `json:"title"`
+	Text  string `json:"text"`
+}
+
+// desktop records an alert for the tray icon (in this process, or the
+// "printty tray" helper of a service, which polls for it).
+func (q *Queue) desktop(title, text string) {
+	if q.st.Settings().DesktopOff {
+		return
+	}
+	q.deskMu.Lock()
+	defer q.deskMu.Unlock()
+	q.deskSeq++
+	q.desk = append(q.desk, DesktopAlert{Seq: q.deskSeq, Title: title, Text: text})
+	if len(q.desk) > 10 {
+		q.desk = q.desk[len(q.desk)-10:]
+	}
+}
+
+// DesktopAlerts returns the alerts after seq, and the newest seq.
+func (q *Queue) DesktopAlerts(since uint64) (uint64, []DesktopAlert) {
+	q.deskMu.Lock()
+	defer q.deskMu.Unlock()
+	var out []DesktopAlert
+	for _, a := range q.desk {
+		if a.Seq > since {
+			out = append(out, a)
+		}
+	}
+	return q.deskSeq, out
 }
 
 func New(st *store.Store, be printer.Backend, tg *notify.Telegram, publicURL string) *Queue {
@@ -474,6 +513,7 @@ func (q *Queue) alertRequest(ctx context.Context, j store.Job) {
 		text += "\nNote: \"" + j.Note + "\""
 	}
 	text += "\n\nApprove when the printer is on and has paper."
+	q.desktop("Print request from "+who(j, q.st), j.FileName+"\n"+describe(j))
 	q.send(ctx, text,
 		[]notify.Button{{Text: "Approve", Data: q.action("a", j.ID), URL: q.link("/admin")}, {Text: "Reject", Data: q.action("r", j.ID)}},
 	)
@@ -483,6 +523,7 @@ func (q *Queue) alertIncoming(ctx context.Context, j store.Job) {
 	if !q.st.Settings().NotifyIncoming {
 		return
 	}
+	q.desktop("Printing for "+who(j, q.st), j.FileName+"\n"+describe(j)+"\nMake sure the printer is on and has paper.")
 	q.send(ctx, fmt.Sprintf("Printing now for %s\n%s\n%s\n\nMake sure the printer is on and has paper.", who(j, q.st), j.FileName, describe(j)))
 }
 
@@ -497,10 +538,12 @@ func (q *Queue) alertOffline(ctx context.Context, why string) {
 		return
 	}
 	n := len(q.st.Jobs(func(j store.Job) bool { return j.State == store.JobHeld || j.State == store.JobQueued }))
+	q.desktop("The printer seems to be off", plural(max(n, 1), "job")+" waiting. Switch it on and they print by themselves.")
 	q.send(ctx, fmt.Sprintf("The printer seems to be off.\n%s\n%s waiting. Please switch it on.", why, plural(max(n, 1), "job")))
 }
 
 func (q *Queue) alertFlip(ctx context.Context, j store.Job) {
+	q.desktop("Flip needed: "+j.FileName, "The fronts are printed. Put the stack back in the tray, then press Continue on the Requests page.")
 	q.send(ctx, fmt.Sprintf("Flip needed: %s\nThe front sides are printed. Put the stack back in the tray as calibrated, then continue.", j.FileName),
 		[]notify.Button{{Text: "Continue", Data: q.action("c", j.ID), URL: q.link("/admin")}, {Text: "Cancel", Data: q.action("x", j.ID)}},
 	)

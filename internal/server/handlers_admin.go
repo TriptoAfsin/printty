@@ -28,7 +28,7 @@ func (s *Server) view(j store.Job) jobView {
 			if u.Role == store.RoleAdmin {
 				jv.Role = "Admin"
 			} else if u.Trusted {
-				jv.Role = "Trusted"
+				jv.Role = "Prints directly"
 			}
 		}
 	}
@@ -96,10 +96,11 @@ type userRow struct {
 }
 
 type usersData struct {
-	Users    []userRow
-	Invites  int
-	NewLink  string
-	Settings store.Settings
+	NewNeedsApproval bool
+	Users            []userRow
+	Invites          int
+	NewLink          string
+	Settings         store.Settings
 }
 
 func (s *Server) usersPage(r *http.Request, v viewer, link string) page {
@@ -135,8 +136,12 @@ func (s *Server) baseURL(r *http.Request) string {
 
 func (s *Server) postInviteCreate(w http.ResponseWriter, r *http.Request, v viewer) {
 	tok := store.RandomToken(16)
-	s.st.AddInvite(store.Invite{TokenHash: auth.HashToken(tok), CreatedBy: v.User.ID, Note: r.FormValue("note"), Expires: time.Now().Add(7 * 24 * time.Hour)})
-	s.render(w, r, "users", s.usersPage(r, v, s.baseURL(r)+"/invite/"+tok))
+	s.st.AddInvite(store.Invite{TokenHash: auth.HashToken(tok), CreatedBy: v.User.ID, Note: r.FormValue("note"), Expires: time.Now().Add(7 * 24 * time.Hour), NeedsApproval: r.FormValue("approval") == "1"})
+	pg := s.usersPage(r, v, s.baseURL(r)+"/invite/"+tok)
+	d := pg.Data.(usersData)
+	d.NewNeedsApproval = r.FormValue("approval") == "1"
+	pg.Data = d
+	s.render(w, r, "users", pg)
 }
 
 func (s *Server) postUserAction(w http.ResponseWriter, r *http.Request, v viewer) {
@@ -150,10 +155,10 @@ func (s *Server) postUserAction(w http.ResponseWriter, r *http.Request, v viewer
 	switch r.PathValue("action") {
 	case "trust":
 		err = s.st.UpdateUser(id, func(u *store.User) { u.Trusted = true })
-		msg = "Their prints no longer need approval."
+		msg = "They print directly now, without waiting for approval."
 	case "untrust":
 		err = s.st.UpdateUser(id, func(u *store.User) { u.Trusted = false })
-		msg = "Their prints need approval again."
+		msg = "Their prints wait for your approval now."
 	case "disable":
 		err = s.st.UpdateUser(id, func(u *store.User) { u.Disabled = true })
 		s.st.DeleteUserSessions(id)
@@ -175,6 +180,7 @@ func (s *Server) postUserAction(w http.ResponseWriter, r *http.Request, v viewer
 }
 
 type settingsData struct {
+	Version  string
 	Settings store.Settings
 	Printers []printer.Info
 	Current  string
@@ -185,7 +191,7 @@ type settingsData struct {
 
 func (s *Server) getSettings(w http.ResponseWriter, r *http.Request, v viewer) {
 	ps, _ := s.be.Printers(r.Context())
-	d := settingsData{Settings: s.st.Settings(), Printers: ps, Current: s.q.Printer(r.Context()), Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork(), Startup: s.startup()}
+	d := settingsData{Settings: s.st.Settings(), Printers: ps, Current: s.q.Printer(r.Context()), Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork(), Startup: s.startup(), Version: s.rt.Version}
 	s.render(w, r, "settings", page{Title: "Settings", Nav: "settings", V: v, Data: d})
 }
 
@@ -207,6 +213,7 @@ func (s *Server) postSettings(w http.ResponseWriter, r *http.Request, v viewer) 
 		x.AutoDuplex = r.FormValue("autoDuplex") == "on"
 		x.NotifyTelegram = r.FormValue("notifyTelegram") == "on"
 		x.NotifyIncoming = r.FormValue("notifyIncoming") == "on"
+		x.DesktopOff = r.FormValue("desktop") != "on"
 	})
 	back(w, r, "/admin/settings", "Settings saved.")
 }

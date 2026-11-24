@@ -13,6 +13,42 @@
     });
   });
 
+  // Confirm before destructive actions: forms with data-confirm ask first in
+  // a dialog (Escape or Keep cancels). Delegated, so it covers live-refreshed
+  // content too, and runs in the capture phase, before the busy-button handler.
+  var dlg;
+  function confirmDialog() {
+    if (dlg) return dlg;
+    dlg = document.createElement("dialog");
+    dlg.className = "confirm";
+    dlg.innerHTML = '<form method="dialog" class="stack"><h2 class="head"></h2><p class="small muted"></p>' +
+      '<div class="confirm-acts"><button class="btn ghost" value="no">Keep</button><button class="btn danger" value="yes"></button></div></form>';
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close("no"); }); // click outside
+    document.body.appendChild(dlg);
+    return dlg;
+  }
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (!form.dataset || !form.dataset.confirm) return;
+    if (form.dataset.confirmed) { delete form.dataset.confirmed; return; }
+    e.preventDefault();
+    e.stopPropagation();
+    var d = confirmDialog();
+    d.querySelector("h2").textContent = form.dataset.confirm;
+    d.querySelector("p").textContent = form.dataset.confirmDetail || "";
+    d.querySelector("p").hidden = !form.dataset.confirmDetail;
+    var ok = d.querySelector('[value="yes"]');
+    ok.textContent = form.dataset.confirmOk || "OK";
+    d.returnValue = "";
+    d.onclose = function () {
+      if (d.returnValue !== "yes") return;
+      form.dataset.confirmed = "1";
+      if (form.requestSubmit) form.requestSubmit(); else form.submit();
+    };
+    d.showModal();
+    d.querySelector('[value="no"]').focus(); // the safe choice has focus
+  }, true);
+
   // Copies stepper.
   document.querySelectorAll("[data-step]").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -39,19 +75,26 @@
     });
   });
 
-  // Live regions: refresh [data-live] from the server while the page is visible.
+  // Live updates while the page is visible: the [data-live] region (every few
+  // seconds) and the header's [data-sync] parts (printer status, request
+  // count), so they never disagree. Pages without a live region check every 30 s.
   var live = document.querySelector("[data-live]");
-  if (live) {
-    var every = parseInt(live.dataset.live, 10) || 5000;
+  var syncs = document.querySelectorAll("[data-sync]");
+  if (live || syncs.length) {
+    var every = live ? parseInt(live.dataset.live, 10) || 5000 : 30000;
     setInterval(function () {
       if (document.hidden) return;
       fetch(location.href, { headers: { "X-Live": "1" }, credentials: "same-origin" })
-        .then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (r) { return r.ok && !r.redirected ? r.text() : null; })
         .then(function (html) {
           if (!html) return;
           var doc = new DOMParser().parseFromString(html, "text/html");
-          var fresh = doc.querySelector("[data-live]");
+          var fresh = live && doc.querySelector("[data-live]");
           if (fresh && fresh.innerHTML !== live.innerHTML) live.innerHTML = fresh.innerHTML;
+          syncs.forEach(function (el) {
+            var f = doc.querySelector('[data-sync="' + el.dataset.sync + '"]');
+            if (f && f.innerHTML !== el.innerHTML) el.innerHTML = f.innerHTML;
+          });
         })
         .catch(function () {});
     }, every);

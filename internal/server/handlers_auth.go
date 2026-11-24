@@ -173,9 +173,16 @@ func (s *Server) postInvite(w http.ResponseWriter, r *http.Request) {
 		s.render(w, r, "invite", page{Title: "Join Printty", Error: err.Error(), Data: data})
 		return
 	}
-	s.st.UseInvite(th, u.ID)
+	inv, err := s.st.UseInvite(th, u.ID)
+	welcome := "Welcome, " + u.Name + ". You can print now."
+	if err == nil && !inv.NeedsApproval {
+		s.st.UpdateUser(u.ID, func(x *store.User) { x.Trusted = true })
+		u.Trusted = true
+	} else {
+		welcome = "Welcome, " + u.Name + ". Your prints go to the owner for approval first."
+	}
 	s.startSession(w, u)
-	back(w, r, "/", "Welcome, "+u.Name+". You can print now.")
+	back(w, r, "/", welcome)
 }
 
 // ---- guests

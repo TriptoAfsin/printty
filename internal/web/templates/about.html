@@ -1,0 +1,38 @@
+{{define "content"}}
+<main class="wrap">
+  {{template "messages" .}}
+  <div class="row between">
+    <h1 class="head">About Printty</h1>
+    <a class="btn ghost" href="/admin/settings">Back to settings</a>
+  </div>
+  {{with .Data}}
+  <section class="card stack about-hero">
+    <div class="row">
+      <img class="about-icon" src="{{asset "icon.svg"}}" alt="">
+      <div>
+        <div class="big">Printty {{.Version}}</div>
+        <div class="small muted">Shares this computer's printer with phones on the network.</div>
+      </div>
+    </div>
+    <div class="acts">
+      <a class="btn primary" href="https://github.com/TriptoAfsin/printty/releases/latest" target="_blank" rel="noopener">Check for a newer version</a>
+      <a class="btn ghost" href="https://github.com/TriptoAfsin/printty" target="_blank" rel="noopener">Project page</a>
+    </div>
+  </section>
+  <section class="card">
+    <h2 class="head">This copy</h2>
+    <dl class="facts">
+      <div><dt>Version</dt><dd>{{.Version}}</dd></div>
+      <div><dt>Running</dt><dd>{{.Mode}}</dd></div>
+      {{if .Uptime}}<div><dt>Up for</dt><dd>{{.Uptime}} (since {{clock .Started}})</dd></div>{{end}}
+      <div><dt>Printer</dt><dd>{{if .Printer}}{{.Printer}}{{else}}None found{{end}}</dd></div>
+      <div><dt>Telegram</dt><dd>{{if .Telegram}}Connected{{else}}Not set up{{end}}</dd></div>
+      {{range .Links}}<div><dt>Address</dt><dd><code>{{.}}</code></dd></div>{{end}}
+      <div><dt>Program</dt><dd><code>{{.Exe}}</code></dd></div>
+      <div><dt>Data folder</dt><dd><code>{{.DataDir}}</code></dd></div>
+      <div><dt>Built with</dt><dd>{{.GoVersion}}, {{.Platform}}</dd></div>
+    </dl>
+  </section>
+  {{end}}
+</main>
+{{end}}

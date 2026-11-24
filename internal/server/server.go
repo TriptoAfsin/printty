@@ -165,6 +165,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /queue", s.getQueue)
 	m.HandleFunc("POST /jobs/{id}/cancel", s.postCancel)
 	m.HandleFunc("GET /api/status", s.apiStatus)
+	m.HandleFunc("GET /api/local/alerts", s.apiLocalAlerts)
 
 	m.HandleFunc("GET /admin", s.admin(s.getAdmin))
 	m.HandleFunc("POST /admin/jobs/{id}/{action}", s.admin(s.postJobAction))
@@ -172,6 +173,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("POST /admin/invites", s.admin(s.postInviteCreate))
 	m.HandleFunc("POST /admin/users/{id}/{action}", s.admin(s.postUserAction))
 	m.HandleFunc("GET /admin/settings", s.admin(s.getSettings))
+	m.HandleFunc("GET /admin/about", s.admin(s.getAbout))
 	m.HandleFunc("POST /admin/settings", s.admin(s.postSettings))
 	m.HandleFunc("POST /admin/test-alert", s.admin(s.postTestAlert))
 	m.HandleFunc("POST /admin/selftest", s.admin(s.postSelfTest))

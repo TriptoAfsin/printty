@@ -158,7 +158,7 @@ func run(ctx context.Context, cfg config.Config, mode string) error {
 	}
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
-	srv.SetRuntime(server.Runtime{Mode: mode, DataDir: cfg.DataDir, Addr: cfg.Addr, Stop: stop})
+	srv.SetRuntime(server.Runtime{Mode: mode, DataDir: cfg.DataDir, Addr: cfg.Addr, Stop: stop, Version: version, Started: time.Now()})
 
 	hs := &http.Server{
 		Addr:              cfg.Addr,
@@ -183,7 +183,7 @@ func run(ctx context.Context, cfg config.Config, mode string) error {
 	}()
 	go q.Run(ctx)
 	if mode != "service" { // a service has no desktop; "printty tray" shows its icon
-		startTray(ctx, cfg, mode, stop)
+		startTray(ctx, cfg, mode, stop, q)
 	}
 
 	local := localURL(cfg)
