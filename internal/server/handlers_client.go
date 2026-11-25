@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,14 @@ type printData struct {
 	Pages    []int // every page of the draft, for the editor
 	Guest    bool
 	Note     string
+	Margins  bool // offer a binding margin (ownLayout)
+}
+
+// ownLayout reports whether pages print where Printty's layout puts them,
+// so a binding margin can be offered: always on Windows (it draws every
+// page itself); on CUPS unless the owner chose to let CUPS lay pages out.
+func ownLayout(set store.Settings) bool {
+	return runtime.GOOS == "windows" || !set.SystemLayout
 }
 
 func (s *Server) printPage(r *http.Request, v viewer, draft *store.Job) page {
@@ -58,7 +67,7 @@ func (s *Server) printPage(r *http.Request, v viewer, draft *store.Job) page {
 	if len(papers) > 4 {
 		papers = papers[:4]
 	}
-	d := printData{Draft: draft, Caps: caps, Papers: papers, Guest: v.User == nil, Previews: s.previewPages(draft)}
+	d := printData{Draft: draft, Caps: caps, Papers: papers, Guest: v.User == nil, Previews: s.previewPages(draft), Margins: ownLayout(s.st.Settings())}
 	if draft != nil {
 		for p := 1; p <= draft.DocPages && p <= 500; p++ {
 			d.Pages = append(d.Pages, p)
@@ -97,7 +106,7 @@ func (s *Server) getPrint(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseOptions reads and validates the print options from form fields.
-func parseOptions(f map[string]string, docPages int, caps printer.Caps) (printer.Options, error) {
+func parseOptions(f map[string]string, docPages int, caps printer.Caps, margins bool) (printer.Options, error) {
 	papers := caps.Papers
 	o := printer.Options{Copies: 1, Duplex: printer.Simplex, Color: true, Paper: "A4"}
 	if c, err := strconv.Atoi(f["copies"]); err == nil {
@@ -122,7 +131,7 @@ func parseOptions(f map[string]string, docPages int, caps printer.Caps) (printer
 			o.Paper = p
 		}
 	}
-	if err := parseLayout(f, docPages, caps, &o); err != nil {
+	if err := parseLayout(f, docPages, caps, margins, &o); err != nil {
 		return o, err
 	}
 	return o, nil
@@ -157,7 +166,8 @@ func (s *Server) postPrint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pp := s.printPage(r, v, job)
-	opts, err := parseOptions(fields, job.DocPages, pp.Data.(printData).Caps)
+	pd := pp.Data.(printData)
+	opts, err := parseOptions(fields, job.DocPages, pd.Caps, pd.Margins)
 	if err != nil {
 		s.saveDraft(*job, v)
 		s.printError(w, r, v, job, err.Error())

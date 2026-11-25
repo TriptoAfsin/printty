@@ -70,6 +70,8 @@ const (
 	capVertRes    = 10
 	capLogPixelsX = 88
 	capLogPixelsY = 90
+	capPhysWidth  = 110
+	capPhysOffX   = 112
 
 	printerStatusPaused       = 0x1
 	printerStatusError        = 0x2
@@ -580,7 +582,14 @@ func (w *Windows) printLocked(ctx context.Context, job Job) error {
 	}()
 
 	areaW, areaH := float64(horz)/float64(dpiX), float64(vert)/float64(dpiY)
-	sheets := Layout(pages, func(p int) (float64, float64) { return src.size(p - 1) }, areaW, areaH, job.Options)
+	opts := job.Options
+	opts.BackFlip = job.BackFlip
+	if physW, offX := getCaps(hdc, capPhysWidth), getCaps(hdc, capPhysOffX); physW > 0 && offX >= 0 {
+		// The binding margin counts from the paper's edge: the narrower of
+		// the printer's left and right unprintable edges is already there.
+		opts.BindEdge = float64(max(0, min(offX, physW-horz-offX))) / float64(dpiX)
+	}
+	sheets := Layout(pages, func(p int) (float64, float64) { return src.size(p - 1) }, areaW, areaH, opts)
 	maxDPI := float64(renderDPI)
 	if job.Options.Driver["quality"] == "draft" {
 		maxDPI = 150

@@ -112,7 +112,9 @@ Risk to retire in phase 0: `Windows.Data.Pdf` must work in a service running in 
 
 `lp -d <printer> -n <copies> -P <pages> -o sides=<one-sided|two-sided-long-edge|two-sided-short-edge> -o print-color-mode=<color|monochrome> -o media=<size> <file>`. Printer list and status from `lpstat`. CUPS renders PDFs itself.
 
-CUPS lays pages out itself, so some of the shared layout is approximate there: pages print in document order (a reordered page list is a Windows feature), "all on one sheet" and 3 or 8 per sheet become the next `number-up` CUPS supports (2, 4, 6, 9, 16), and dragged positions are not applied.
+By default Printty composes the finished sheets itself (`compose.go`, in the worker): with pdfcpu it turns each source page into a form XObject (still vector) and places it on new pages the size of the paper, exactly where `layout.go` says, with a 0.17 in edge. CUPS then prints that file as it is (`-o print-scaling=none`, no `-P` or `number-up`). Page order, turned pages, 3/8/all per sheet, dragged photos and the binding margin all print as previewed, like on Windows. If a PDF can't be composed (damaged, password-protected), the job falls back to the next mode instead of failing.
+
+The owner can switch this off in Settings ("Who lays out the pages: the print system", `Settings.SystemLayout`). CUPS then lays pages out itself and some of the shared layout is approximate: pages print in document order, "all on one sheet" and 3 or 8 per sheet become the next `number-up` CUPS supports (2, 4, 6, 9, 16), dragged positions are not applied, and the binding margin isn't offered.
 
 ### Later: direct IPP
 

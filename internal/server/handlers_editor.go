@@ -85,7 +85,8 @@ func (s *Server) previewPages(j *store.Job) []int {
 }
 
 // parseLayout reads the layout and driver options from the form into o.
-func parseLayout(f map[string]string, docPages int, caps printer.Caps, o *printer.Options) error {
+// margins: whether a binding margin can be honoured (ownLayout).
+func parseLayout(f map[string]string, docPages int, caps printer.Caps, margins bool, o *printer.Options) error {
 	switch printer.Orientation(f["orientation"]) {
 	case printer.Portrait:
 		o.Orientation = printer.Portrait
@@ -137,6 +138,13 @@ func parseLayout(f map[string]string, docPages int, caps printer.Caps, o *printe
 	}
 	if n, err := strconv.Atoi(f["scale"]); err == nil && n >= 10 && n < 100 {
 		o.Scale = n
+	}
+	if side := f["bind"]; (side == printer.BindLeft || side == printer.BindRight) && margins {
+		n, err := strconv.Atoi(f["bindmm"])
+		if err != nil || n < printer.BindMinMM || n > printer.BindMaxMM {
+			return fmt.Errorf("Pick a binding margin from %d to %d mm.", printer.BindMinMM, printer.BindMaxMM)
+		}
+		o.BindSide, o.BindMM = side, n
 	}
 	for key, dst := range map[string]*float64{"offx": &o.OffX, "offy": &o.OffY} {
 		if v, err := strconv.ParseFloat(f[key], 64); err == nil && !math.IsNaN(v) {

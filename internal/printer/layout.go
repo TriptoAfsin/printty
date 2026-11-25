@@ -150,10 +150,63 @@ func bestScale(n int, w, h float64, wide bool) float64 {
 	return math.Min(cw/w, ch/h)
 }
 
+// Binding margin sides and limits (Options.BindSide, BindMM).
+const (
+	BindLeft  = "left"
+	BindRight = "right"
+	BindMinMM = 5
+	BindMaxMM = 30
+)
+
+// bindInset is how much of the printable area the binding margin takes, in
+// inches: the margin less the printer's own edge, at most half the area.
+func bindInset(o Options, areaW float64) float64 {
+	if (o.BindSide != BindLeft && o.BindSide != BindRight) || o.BindMM <= 0 {
+		return 0
+	}
+	return math.Max(0, math.Min(areaW/2, float64(o.BindMM)/25.4-o.BindEdge))
+}
+
+// BindOnLeft reports whether sheet i (0-based, in printing order) has its
+// binding margin on the left. A back side is mirrored when the sheet flips
+// over its side edge: the long edge of a portrait sheet or the short edge of
+// a landscape one. With the OS duplexing, every second sheet is a back; a
+// manual back pass (BackFlip) is all backs.
+func BindOnLeft(o Options, i int, wide bool) bool {
+	left := o.BindSide == BindLeft
+	flip := o.BackFlip
+	if flip == "" && (o.Duplex == LongEdge || o.Duplex == ShortEdge) && i%2 == 1 {
+		flip = o.Duplex
+	}
+	if flip != "" && (flip == LongEdge) != wide {
+		left = !left
+	}
+	return left
+}
+
 // Layout places pages onto sheets. pages may contain 0 for an empty slot.
 // size returns a page's size in inches; areaW, areaH is the printable area of
-// the sheet in its final orientation.
+// the sheet in its final orientation. A binding margin narrows the area and,
+// on sheets where it's on the left, moves everything right.
 func Layout(pages []int, size func(page int) (w, h float64), areaW, areaH float64, o Options) []Sheet {
+	g := bindInset(o, areaW)
+	if g == 0 {
+		return layoutArea(pages, size, areaW, areaH, o)
+	}
+	sheets := layoutArea(pages, size, areaW-g, areaH, o)
+	for i, sh := range sheets {
+		if !BindOnLeft(o, i, areaW > areaH) {
+			continue
+		}
+		for k := range sh {
+			sh[k].Rect.X += g
+			sh[k].Cell.X += g
+		}
+	}
+	return sheets
+}
+
+func layoutArea(pages []int, size func(page int) (w, h float64), areaW, areaH float64, o Options) []Sheet {
 	if o.OneSheet {
 		return []Sheet{oneSheet(realPages(pages), size, areaW, areaH, o)}
 	}

@@ -14,6 +14,15 @@
         </label>
         <div class="switchrow"><div><div class="fname">Automatic two-sided</div><div class="small muted">Only if the printer has a duplex unit. The Canon G1010 doesn't.</div></div><label class="switch"><input type="checkbox" name="autoDuplex" {{if .Data.Settings.AutoDuplex}}checked{{end}} aria-label="Automatic two-sided"><span></span></label></div>
         <div class="switchrow"><div><div class="fname">Print backs last page first</div><div class="small muted">For manual flips. Turn off if the backs come out in the wrong order.</div></div><label class="switch"><input type="checkbox" name="flipReverse" {{if .Data.Settings.FlipReverse}}checked{{end}} aria-label="Print backs last page first"><span></span></label></div>
+        {{if .Data.LayoutChoice}}
+        <div class="field"><span class="label">Who lays out the pages</span>
+          <div class="seg" role="radiogroup" aria-label="Who lays out the pages">
+            <label><input type="radio" name="layout" value="printty" {{if not .Data.Settings.SystemLayout}}checked{{end}}>Printty</label>
+            <label><input type="radio" name="layout" value="system" {{if .Data.Settings.SystemLayout}}checked{{end}}>The print system (CUPS)</label>
+          </div>
+          <span class="small muted">Printty prints exactly what the preview shows: binding margins, page order, turned pages and moved photos. With the print system, CUPS arranges the pages itself and binding margins aren't offered; try it if a printer has trouble with Printty's pages.</span>
+        </div>
+        {{end}}
         <button class="btn ghost" type="submit" form="selftest">Check printing works</button>
       </section>
 

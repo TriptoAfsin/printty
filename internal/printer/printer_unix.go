@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"regexp"
@@ -94,12 +95,34 @@ func (CUPS) PageCount(ctx context.Context, path, kind string) (int, error) {
 	return n, nil
 }
 
+// cupsEdge is the unprintable edge Printty leaves on composed sheets, in
+// inches (about 4.3 mm): inside what most inkjets and lasers can reach.
+const cupsEdge = 0.17
+
 func (CUPS) Print(ctx context.Context, job Job) error {
+	// Printty's own layout: print finished sheets, as previewed. If the PDF
+	// can't be composed, CUPS lays it out instead of the job failing.
+	file, composed := job.Path, false
+	if !job.SystemLayout {
+		out := job.Path + ".sheets.pdf"
+		o := job.Options
+		o.BackFlip = job.BackFlip
+		if _, err := ComposeLayout(ctx, job.Path, job.Kind, job.PageList, o, cupsEdge, out); err != nil {
+			slog.Warn("couldn't compose the sheets; CUPS lays the pages out instead", "job", job.ID, "err", err)
+			os.Remove(out)
+		} else {
+			defer os.Remove(out)
+			file, composed = out, true
+		}
+	}
+
 	args := []string{"-d", job.Printer, "-t", docName(job.ID) + " " + job.Title}
 	copies := max(job.Options.Copies, 1)
 	args = append(args, "-n", strconv.Itoa(copies))
 	pages := job.Options.Pages
-	if len(job.PageList) > 0 {
+	if composed {
+		pages = "" // already chosen and in order
+	} else if len(job.PageList) > 0 {
 		var s []string
 		for _, p := range job.PageList {
 			if p > 0 { // CUPS can't leave a slot empty; number-up regroups
@@ -129,8 +152,14 @@ func (CUPS) Print(ctx context.Context, job Job) error {
 	if m := cupsMedia(job.Options.Paper); m != "" {
 		args = append(args, "-o", "media="+m)
 	}
-	args = append(args, layoutArgs(job.Options, max(len(realPages(job.PageList)), 1))...)
-	args = append(args, job.Path)
+	if composed {
+		// Each page is already one sheet at full size: no scaling, no number-up.
+		args = append(args, "-o", "print-scaling=none")
+		args = append(args, driverArgs(job.Options)...)
+	} else {
+		args = append(args, layoutArgs(job.Options, max(len(realPages(job.PageList)), 1))...)
+	}
+	args = append(args, file)
 	_, err := run(ctx, "lp", args...)
 	return err
 }

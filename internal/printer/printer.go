@@ -43,6 +43,18 @@ type Options struct {
 	OneSheet bool               `json:"oneSheet,omitempty"`
 	Place    map[int][2]float64 `json:"place,omitempty"`
 
+	// Binding margin: blank space down one side of every sheet, measured
+	// from the paper's edge, so the print can be stapled, punched or bound.
+	// On the back of a two-sided sheet it swaps sides (see layout.go).
+	BindSide string `json:"bindSide,omitempty"` // BindLeft, BindRight or "" for none
+	BindMM   int    `json:"bindMM,omitempty"`   // BindMinMM..BindMaxMM
+
+	// Set for one print run, never stored. BackFlip: this manual-duplex pass
+	// prints only backs, flipped this way. BindEdge: the printer's own
+	// unprintable edge in inches, which already counts towards BindMM.
+	BackFlip Duplex  `json:"-"`
+	BindEdge float64 `json:"-"`
+
 	// Driver holds printer-specific choices by Caps.Options key (paper type,
 	// paper source, quality...). Each backend maps them to its own system.
 	Driver map[string]string `json:"driver,omitempty"`
@@ -138,6 +150,14 @@ type Job struct {
 	// PageList is the explicit 1-based pages to print, in order (manual
 	// duplex). 0 is an empty slot, so sheets keep their grouping.
 	PageList []int
+	// BackFlip: this manual-duplex pass prints only backs, flipped this way
+	// (a binding margin swaps sides on them). Backends copy it into
+	// Options.BackFlip; it's here because Options.BackFlip isn't sent to
+	// the worker.
+	BackFlip Duplex
+	// SystemLayout: on CUPS, let the print system lay pages out (number-up,
+	// fit) instead of printing the sheets Printty composes (ComposeLayout).
+	SystemLayout bool
 }
 
 // SpoolState is what happened to a job after it left Printty.

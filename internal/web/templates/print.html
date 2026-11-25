@@ -24,18 +24,29 @@
     </section>
 
     <section class="card stack">
-      <div class="row between"><span class="fname">{{if $album}}Photos{{else}}Pages{{end}}</span><span class="small muted">Tap to leave out, ↻ to turn, drag to reorder.</span></div>
+      <div class="row between"><span class="fname">{{if $album}}Photos{{else}}Pages{{end}}</span><span class="small muted" data-strip-count aria-live="polite"></span></div>
+      <ul class="strip-help small muted">
+        <li><span class="sh-ico sh-x" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></span>Tap a {{if $album}}photo{{else}}page{{end}} to leave it out; tap again to put it back</li>
+        <li><span class="sh-ico" aria-hidden="true"><svg viewBox="0 0 24 24" class="dots"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>Drag the handle to change the order</li>
+        <li><span class="sh-ico" aria-hidden="true">↻</span>Turn it a quarter turn</li>
+      </ul>
       <div class="pagestrip" data-pagestrip>
         {{$id := .Data.Draft.ID}}{{$prev := .Data.Previews}}
         {{range .Data.Pages}}
         <div class="pg" data-page="{{.}}">
           <button type="button" class="pg-img" data-toggle aria-pressed="true" aria-label="{{if $album}}Photo{{else}}Page{{end}} {{.}}: included. Tap to leave out" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight">
             {{if le . (len $prev)}}<img src="/jobs/{{$id}}/page/{{.}}" alt="" draggable="false">{{else}}<span class="pg-blank">{{.}}</span>{{end}}
+            <span class="pg-badge" aria-hidden="true"><svg viewBox="0 0 24 24" class="i-x"><path d="M7 7l10 10M17 7L7 17"/></svg><svg viewBox="0 0 24 24" class="i-plus"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
-          <div class="pg-foot"><span data-pos>{{.}}</span><button type="button" class="pg-rot" data-rotate aria-label="Turn {{if $album}}photo{{else}}page{{end}} {{.}} a quarter turn">↻</button></div>
+          <div class="pg-foot">
+            <span class="pg-grip" data-grip title="Drag to move" aria-hidden="true"><svg viewBox="0 0 24 24" class="dots"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+            <span class="pg-pos" data-pos>{{.}}</span>
+            <button type="button" class="pg-rot" data-rotate aria-label="Turn {{if $album}}photo{{else}}page{{end}} {{.}} a quarter turn">↻</button>
+          </div>
         </div>
         {{end}}
       </div>
+      <p class="small muted kbd-help">With a keyboard: Alt+arrow keys move the selected {{if $album}}photo{{else}}page{{end}}.</p>
       <input type="hidden" name="rotate" value="">
     </section>
     {{else}}
@@ -148,6 +159,22 @@
         <label><input type="radio" name="duplex" value="two-sided">Two-sided</label>
       </div>
     </fieldset>
+
+    {{if .Data.Margins}}
+    <fieldset class="field">
+      <legend>Binding margin <span class="muted">Room to staple, punch or bind</span></legend>
+      <div class="seg">
+        <label><input type="radio" name="bind" value="" checked>None</label>
+        <label><input type="radio" name="bind" value="left">Left</label>
+        <label><input type="radio" name="bind" value="right">Right</label>
+      </div>
+    </fieldset>
+    <div class="field bind-size" data-bind-size>
+      <label class="label row between" for="bindmm"><span>Margin width</span><span class="muted" data-bind-out>10 mm</span></label>
+      <input class="range" type="range" id="bindmm" name="bindmm" min="5" max="30" step="1" value="10">
+      <span class="small muted" data-bind-note>Measured from the edge of the paper.</span>
+    </div>
+    {{end}}
 
     {{if .Data.Caps.Color}}
     <fieldset class="field">

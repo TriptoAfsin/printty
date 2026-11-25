@@ -98,6 +98,12 @@ func layoutArgs(o Options, pages int) []string {
 	if o.Scale > 0 && o.Scale < 100 {
 		args = append(args, "-o", "scaling="+strconv.Itoa(o.Scale))
 	}
+	return append(args, driverArgs(o)...)
+}
+
+// driverArgs passes the printer's own options (paper type, tray...) to lp.
+func driverArgs(o Options) []string {
+	var args []string
 	keys := make([]string, 0, len(o.Driver))
 	for k := range o.Driver {
 		keys = append(keys, k)

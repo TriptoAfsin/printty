@@ -116,11 +116,14 @@ type Settings struct {
 	MaxUploadMB     int    `json:"maxUploadMB"`
 	RequestTTLHours int    `json:"requestTTLHours"`
 	FlipReverse     bool   `json:"flipReverse"`
-	AutoDuplex      bool   `json:"autoDuplex"` // printer has a duplex unit
-	NotifyTelegram  bool   `json:"notifyTelegram"`
-	NotifyIncoming  bool   `json:"notifyIncoming"`
-	DesktopOff      bool   `json:"desktopOff,omitempty"` // no Windows notifications on this PC
-	Clock12         bool   `json:"clock12,omitempty"`
+	// SystemLayout (Linux, macOS): let CUPS lay pages out instead of printing
+	// the sheets Printty composes. Off by default.
+	SystemLayout   bool `json:"systemLayout,omitempty"`
+	AutoDuplex     bool `json:"autoDuplex"` // printer has a duplex unit
+	NotifyTelegram bool `json:"notifyTelegram"`
+	NotifyIncoming bool `json:"notifyIncoming"`
+	DesktopOff     bool `json:"desktopOff,omitempty"` // no Windows notifications on this PC
+	Clock12        bool `json:"clock12,omitempty"`
 	// Templates are the owner's Telegram message texts by key; empty = default.
 	Templates        map[string]string `json:"templates,omitempty"` // show times as 9:01 PM instead of 21:01
 	KeepHistoryHours int               `json:"keepHistoryHours"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -197,11 +198,14 @@ type settingsData struct {
 	Telegram  bool
 	Links     bool
 	Startup   startupData
+	// LayoutChoice: offer who lays out the pages (CUPS only; Windows always
+	// prints Printty's layout).
+	LayoutChoice bool
 }
 
 func (s *Server) getSettings(w http.ResponseWriter, r *http.Request, v viewer) {
 	ps, _ := s.be.Printers(r.Context())
-	d := settingsData{Settings: s.st.Settings(), Printers: ps, Current: s.q.Printer(r.Context()), Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork(), Startup: s.startup(), Version: s.rt.Version}
+	d := settingsData{Settings: s.st.Settings(), Printers: ps, Current: s.q.Printer(r.Context()), Telegram: s.tg != nil, Links: s.tg != nil && !s.tg.CallbacksWork(), Startup: s.startup(), Version: s.rt.Version, LayoutChoice: runtime.GOOS != "windows"}
 	for _, t := range queue.Templates {
 		cur := d.Settings.Templates[t.Key]
 		tv := tplView{Key: t.Key, Label: t.Label, Fields: t.Fields, Text: cur, Custom: cur != "", Sample: s.q.SampleMessage(t.Key)}
@@ -240,6 +244,9 @@ func (s *Server) postSettings(w http.ResponseWriter, r *http.Request, v viewer) 
 		x.RequestTTLHours = atoi("requestTTLHours", x.RequestTTLHours, 1, 168)
 		x.FlipReverse = r.FormValue("flipReverse") == "on"
 		x.AutoDuplex = r.FormValue("autoDuplex") == "on"
+		if l := r.FormValue("layout"); l != "" {
+			x.SystemLayout = l == "system"
+		}
 		x.NotifyTelegram = r.FormValue("notifyTelegram") == "on"
 		x.NotifyIncoming = r.FormValue("notifyIncoming") == "on"
 		x.DesktopOff = r.FormValue("desktop") != "on"

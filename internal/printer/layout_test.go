@@ -293,3 +293,69 @@ func TestPerSheetThreeAndEight(t *testing.T) {
 		}
 	}
 }
+
+func TestBindOnLeft(t *testing.T) {
+	tests := []struct {
+		name string
+		o    Options
+		i    int
+		wide bool
+		want bool
+	}{
+		{"left, one-sided", Options{BindSide: BindLeft, Duplex: Simplex}, 1, false, true},
+		{"right, one-sided", Options{BindSide: BindRight}, 0, false, false},
+		{"long edge portrait: front keeps it", Options{BindSide: BindLeft, Duplex: LongEdge}, 0, false, true},
+		{"long edge portrait: back mirrors", Options{BindSide: BindLeft, Duplex: LongEdge}, 1, false, false},
+		{"long edge landscape: back keeps it", Options{BindSide: BindLeft, Duplex: LongEdge}, 1, true, true},
+		{"short edge landscape: back mirrors", Options{BindSide: BindRight, Duplex: ShortEdge}, 3, true, true},
+		{"short edge portrait: back keeps it", Options{BindSide: BindRight, Duplex: ShortEdge}, 1, false, false},
+		{"manual back pass: every sheet mirrors", Options{BindSide: BindLeft, Duplex: Simplex, BackFlip: LongEdge}, 0, false, false},
+		{"manual back pass, landscape", Options{BindSide: BindLeft, Duplex: Simplex, BackFlip: LongEdge}, 0, true, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := BindOnLeft(tc.o, tc.i, tc.wide); got != tc.want {
+				t.Errorf("BindOnLeft = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLayoutBindingMargin(t *testing.T) {
+	size := sizes(nil)
+	plain := Layout([]int{1, 2}, size, areaW, areaH, Options{})
+	tests := []struct {
+		name   string
+		o      Options
+		insetX []float64 // where each sheet's printable space starts
+		width  float64   // printable width left for pages
+	}{
+		{"none", Options{}, []float64{0, 0}, areaW},
+		{"20 mm left", Options{BindSide: BindLeft, BindMM: 20}, []float64{20 / 25.4, 20 / 25.4}, areaW - 20/25.4},
+		{"20 mm right", Options{BindSide: BindRight, BindMM: 20}, []float64{0, 0}, areaW - 20/25.4},
+		{"printer edge counts", Options{BindSide: BindLeft, BindMM: 10, BindEdge: 0.17}, []float64{10/25.4 - 0.17, 10/25.4 - 0.17}, areaW - (10/25.4 - 0.17)},
+		{"edge wider than margin", Options{BindSide: BindLeft, BindMM: 5, BindEdge: 0.3}, []float64{0, 0}, areaW},
+		{"two-sided swaps on the back", Options{BindSide: BindLeft, BindMM: 20, Duplex: LongEdge}, []float64{20 / 25.4, 0}, areaW - 20/25.4},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			sheets := Layout([]int{1, 2}, size, areaW, areaH, tc.o)
+			if len(sheets) != 2 {
+				t.Fatalf("sheets = %d", len(sheets))
+			}
+			for i, sh := range sheets {
+				c := sh[0].Cell
+				if !near(c.X, tc.insetX[i]) || !near(c.W, tc.width) {
+					t.Errorf("sheet %d cell = %+v, want x %.3f w %.3f", i+1, c, tc.insetX[i], tc.width)
+				}
+				if c.X+c.W > areaW+0.001 {
+					t.Errorf("sheet %d runs off the area: %+v", i+1, c)
+				}
+				// The page shrinks to the narrower space; never grows.
+				if sh[0].Rect.W > plain[i][0].Rect.W+0.001 {
+					t.Errorf("sheet %d page grew: %v > %v", i+1, sh[0].Rect.W, plain[i][0].Rect.W)
+				}
+			}
+		})
+	}
+}

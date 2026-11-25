@@ -346,8 +346,12 @@ func (q *Queue) print(ctx context.Context, j store.Job, set store.Settings) {
 		}
 	}
 	opts := j.Options
+	var backFlip printer.Duplex
 	if manual {
 		opts.Duplex = printer.Simplex
+		if phase == 2 {
+			backFlip = j.Options.Duplex // a binding margin swaps sides on the backs
+		}
 	}
 	j, _ = q.st.UpdateJob(j.ID, func(x *store.Job) bool {
 		x.State, x.Phase, x.Reason, x.Total = store.JobPrinting, phase, "", printer.Sheets(len(pass), opts)*max(opts.Copies, 1)
@@ -355,7 +359,7 @@ func (q *Queue) print(ctx context.Context, j store.Job, set store.Settings) {
 	})
 	err = q.be.Print(ctx, printer.Job{
 		ID: j.ID, Title: j.FileName, Path: q.st.FilePath(j), Kind: j.Kind, Printer: j.Printer,
-		Options: opts, PageList: pass,
+		Options: opts, PageList: pass, BackFlip: backFlip, SystemLayout: set.SystemLayout,
 	})
 	if err != nil {
 		slog.Error("print failed", "job", j.ID, "err", err)
@@ -499,6 +503,9 @@ func describe(j store.Job) string {
 	}
 	if o.Copies > 1 {
 		parts = append(parts, fmt.Sprintf("%d copies", o.Copies))
+	}
+	if o.BindSide != "" && o.BindMM > 0 {
+		parts = append(parts, fmt.Sprintf("%d mm binding margin on the %s", o.BindMM, o.BindSide))
 	}
 	return strings.Join(parts, ", ")
 }

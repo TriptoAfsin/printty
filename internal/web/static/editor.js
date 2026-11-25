@@ -252,7 +252,10 @@
   var dragHint = form.querySelector("[data-drag-hint]");
   var center = form.querySelector("[data-center]");
   var photo = !!(repeatIn || album);
-  var lastScale = 1, lastSheets = [], lastArea = [1, 1], lastOne = false;
+  var stripCount = form.querySelector("[data-strip-count]");
+  var lastScale = 1, lastSheets = [], lastArea = [1, 1], lastShifts = [], lastOne = false;
+  var bindIn = form.querySelector('input[name="bindmm"]');
+  var bindOut = form.querySelector("[data-bind-out]"), bindNote = form.querySelector("[data-bind-note]");
 
   function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
 
@@ -265,28 +268,99 @@
       repeat: repeatIn ? +(val("repeat") || 1) : 1,
       scale: scaleIn ? +scaleIn.value : 100,
       offX: offXIn ? +offXIn.value : 0, offY: offYIn ? +offYIn.value : 0,
-      autoRotate: form.querySelector('input[name="autorotate"]').checked
+      autoRotate: form.querySelector('input[name="autorotate"]').checked,
+      bindSide: val("bind"), bindMM: bindIn ? +bindIn.value : 0,
+      twoSided: val("duplex") === "two-sided"
     };
   }
 
-  function render() {
+  // Binding margin, as layout.go: it narrows the printable area, and on the
+  // back of a two-sided portrait sheet (a long-edge flip) it swaps sides.
+  function bindOnLeft(o, i, wide) {
+    var left = o.bindSide === "left";
+    if (o.twoSided && i % 2 === 1 && !wide) left = !left;
+    return left;
+  }
+
+  function includedPages() {
     var included = [];
     pageEls().forEach(function (pe) {
       var p = +pe.dataset.page;
       if (!skip[p]) included.push(p);
     });
+    return included;
+  }
+
+  // plan lays the pages out on the chosen paper with options o.
+  function plan(o, included) {
+    var paper = PAPER[val("paper")] || PAPER.A4;
+    var land = sheetOrientation(o, included) === "landscape";
+    var pw = land ? paper[1] : paper[0], ph = land ? paper[0] : paper[1];
+    var areaW = pw - 2 * MARGIN, areaH = ph - 2 * MARGIN;
+    var bind = o.bindSide && o.bindMM > 0 ? o.bindMM / 25.4 : 0;
+    var g = Math.max(0, Math.min(areaW / 2, bind - MARGIN));
+    var sheets = layout(included, areaW - g, areaH, o), shifts = [], bands = [];
+    sheets.forEach(function (sh, i) {
+      var left = bind > 0 && bindOnLeft(o, i, pw > ph);
+      shifts.push(left ? g : 0);
+      bands.push(bind > 0 ? { left: left, w: bind } : null);
+      if (left) sh.forEach(function (pl) { pl.rect.x += g; pl.cell.x += g; });
+    });
+    return { paper: paper, pw: pw, ph: ph, area: [areaW - g, areaH], sheets: sheets, shifts: shifts, bands: bands };
+  }
+
+  // drawSheet draws one sheet of a plan at scale (px per inch). band shows
+  // the binding margin: {left, w} with w in inches from the paper's edge.
+  function drawSheet(sh, i, pw, ph, scale, canDrag, band) {
+    var se = el("div", "sheet" + (canDrag ? " can-drag" : ""));
+    se.style.width = (pw * scale) + "px";
+    se.style.height = (ph * scale) + "px";
+    se.setAttribute("aria-label", "Sheet " + (i + 1));
+    if (band) {
+      var be = el("div", "bind-band " + (band.left ? "left" : "right"));
+      be.style.width = (band.w * scale) + "px";
+      se.appendChild(be);
+    }
+    sh.forEach(function (pl, slot) {
+      var ce = el("div", "cell");
+      ce.style.left = ((pl.cell.x + MARGIN) * scale) + "px";
+      ce.style.top = ((pl.cell.y + MARGIN) * scale) + "px";
+      ce.style.width = (pl.cell.w * scale) + "px";
+      ce.style.height = (pl.cell.h * scale) + "px";
+      var box = el("div", "placed");
+      box.dataset.sheet = i;
+      box.dataset.slot = slot;
+      box.style.left = ((pl.rect.x - pl.cell.x) * scale) + "px";
+      box.style.top = ((pl.rect.y - pl.cell.y) * scale) + "px";
+      box.style.width = (pl.rect.w * scale) + "px";
+      box.style.height = (pl.rect.h * scale) + "px";
+      var src = strip.querySelector('[data-page="' + pl.page + '"] img');
+      var turned = pl.rotate === 90 || pl.rotate === 270;
+      var inner = src ? el("img") : el("span", "placed-blank");
+      if (src) { inner.src = src.src; inner.alt = ""; inner.draggable = false; } else { inner.textContent = pl.page; }
+      inner.style.width = ((turned ? pl.rect.h : pl.rect.w) * scale) + "px";
+      inner.style.height = ((turned ? pl.rect.w : pl.rect.h) * scale) + "px";
+      inner.style.transform = "translate(-50%, -50%) rotate(" + pl.rotate + "deg)";
+      box.appendChild(inner);
+      ce.appendChild(box);
+      se.appendChild(ce);
+    });
+    return se;
+  }
+
+  function render() {
+    var included = includedPages();
     var o = options();
     lastOne = o.oneSheet;
     if (scaleOut) scaleOut.textContent = o.scale + "%";
     if (dragHint) dragHint.textContent = o.oneSheet ? "Drag a photo in the preview to move it on the sheet." :
       album ? "Drag in the preview to move every photo within its space." : "Drag the photo in the preview to move it.";
     if (center) center.textContent = o.oneSheet ? "Line up" : "Centre";
-    var paper = PAPER[val("paper")] || PAPER.A4;
-    var land = sheetOrientation(o, included) === "landscape";
-    var pw = land ? paper[1] : paper[0], ph = land ? paper[0] : paper[1];
-    var areaW = pw - 2 * MARGIN, areaH = ph - 2 * MARGIN;
-    lastArea = [areaW, areaH];
-    var sheets = layout(included, areaW, areaH, o);
+    var pn = plan(o, included), paper = pn.paper, pw = pn.pw, ph = pn.ph, sheets = pn.sheets;
+    lastArea = pn.area;
+    lastShifts = pn.shifts;
+    if (bindOut) bindOut.textContent = o.bindMM + " mm";
+    if (bindNote) bindNote.textContent = "Measured from the edge of the paper." + (o.twoSided && sheets.length > 1 ? (pw > ph ? " It stays on the same side on the back of each sheet." : " On the back of each sheet it moves to the other side, so it lines up with the binding.") : "");
 
     // Remember the turn each page got, so ↻ continues from what you see.
     lastRot = {};
@@ -300,34 +374,7 @@
     lastSheets = sheets;
     sheetsEl.textContent = "";
     sheets.slice(0, 24).forEach(function (sh, i) {
-      var se = el("div", "sheet" + (photo ? " can-drag" : ""));
-      se.style.width = (pw * scale) + "px";
-      se.style.height = (ph * scale) + "px";
-      se.setAttribute("aria-label", "Sheet " + (i + 1));
-      sh.forEach(function (pl, slot) {
-        var ce = el("div", "cell");
-        ce.style.left = ((pl.cell.x + MARGIN) * scale) + "px";
-        ce.style.top = ((pl.cell.y + MARGIN) * scale) + "px";
-        ce.style.width = (pl.cell.w * scale) + "px";
-        ce.style.height = (pl.cell.h * scale) + "px";
-        var box = el("div", "placed");
-        box.dataset.sheet = i;
-        box.dataset.slot = slot;
-        box.style.left = ((pl.rect.x - pl.cell.x) * scale) + "px";
-        box.style.top = ((pl.rect.y - pl.cell.y) * scale) + "px";
-        box.style.width = (pl.rect.w * scale) + "px";
-        box.style.height = (pl.rect.h * scale) + "px";
-        var src = strip.querySelector('[data-page="' + pl.page + '"] img');
-        var turned = pl.rotate === 90 || pl.rotate === 270;
-        var inner = src ? el("img") : el("span", "placed-blank");
-        if (src) { inner.src = src.src; inner.alt = ""; inner.draggable = false; } else { inner.textContent = pl.page; }
-        inner.style.width = ((turned ? pl.rect.h : pl.rect.w) * scale) + "px";
-        inner.style.height = ((turned ? pl.rect.w : pl.rect.h) * scale) + "px";
-        inner.style.transform = "translate(-50%, -50%) rotate(" + pl.rotate + "deg)";
-        box.appendChild(inner);
-        ce.appendChild(box);
-        se.appendChild(ce);
-      });
+      var se = drawSheet(sh, i, pw, ph, scale, photo, pn.bands[i]);
       var num = el("span", "sheet-num");
       num.textContent = i + 1;
       se.appendChild(num);
@@ -367,6 +414,11 @@
       if (img) img.style.transform = r ? "rotate(" + r + "deg)" : "";
       pe.classList.toggle("turned", r === 90 || r === 270);
     });
+    if (stripCount) {
+      var all = pageEls().length;
+      stripCount.textContent = included.length === all ? "All " + plural(all, noun) + " in the print" :
+        included.length + " of " + plural(all, noun) + " in the print";
+    }
 
     // Hidden fields for the server. The page list carries the order.
     var total = pageEls().length, inOrder = true;
@@ -414,7 +466,7 @@
     e.preventDefault();
     drag = { x: e.clientX, y: e.clientY, pl: pl, one: lastOne };
     if (lastOne) {
-      drag.cx = pl.cell.x + pl.cell.w / 2;
+      drag.cx = pl.cell.x - (lastShifts[+box.dataset.sheet] || 0) + pl.cell.w / 2; // in the area left beside the margin
       drag.cy = pl.cell.y + pl.cell.h / 2;
     } else {
       drag.offX = +offXIn.value;
@@ -444,22 +496,61 @@
     render();
   });
   if (scaleIn) scaleIn.addEventListener("input", render);
+  if (bindIn) bindIn.addEventListener("input", render);
 
-  // Reorder the strip by dragging a page: straight away with a mouse, after
-  // a short hold on a touch screen (so the strip still scrolls). Alt+arrow
-  // keys move the focused page.
+  // Reorder the strip by dragging a page: from its ⠿ handle straight away,
+  // from anywhere with a mouse, or after a short hold on a touch screen (so
+  // the strip still scrolls). The page lifts and follows the pointer while a
+  // dashed slot shows where it will land. Alt+arrow keys move the focused page.
   var sort = null, eatClick = false;
   strip.addEventListener("pointerdown", function (e) {
     var pe = e.target.closest("[data-page]");
     if (!pe || e.target.closest("[data-rotate]") || (e.pointerType === "mouse" && e.button !== 0)) return;
-    sort = { pe: pe, x: e.clientX, y: e.clientY, on: false, mouse: e.pointerType === "mouse" };
+    if (sort && sort.on) return; // a second finger doesn't start a second drag
+    endSort();
+    sort = { pe: pe, x: e.clientX, y: e.clientY, px: e.clientX, py: e.clientY, on: false, mouse: e.pointerType === "mouse" };
+    if (e.target.closest("[data-grip]")) { e.preventDefault(); startSort(); return; }
     if (!sort.mouse) sort.timer = setTimeout(function () { if (sort) startSort(); }, 280);
   });
   function startSort() {
     sort.on = true;
+    var box = sort.pe.querySelector(".pg-img"), r = box.getBoundingClientRect();
+    var ghost = el("div", "pg-ghost");
+    ghost.appendChild(box.cloneNode(true));
+    ghost.style.width = r.width + "px";
+    ghost.style.height = r.height + "px";
+    sort.dx = sort.x - r.left;
+    sort.dy = sort.y - r.top;
+    document.body.appendChild(ghost);
+    sort.ghost = ghost;
+    moveGhost();
     sort.pe.classList.add("dragging");
     strip.classList.add("sorting");
     if (navigator.vibrate) navigator.vibrate(10);
+    sort.raf = requestAnimationFrame(edgeScroll);
+  }
+  function moveGhost() {
+    sort.ghost.style.transform = "translate(" + (sort.px - sort.dx) + "px," + (sort.py - sort.dy) + "px)";
+  }
+  // Scroll while the pointer rests near an edge: the strip when it scrolls
+  // on its own (wide screens), otherwise the page (phones). The top edge
+  // starts below the sticky header.
+  function edgeScroll() {
+    if (!sort || !sort.on) return;
+    var own = strip.scrollHeight > strip.clientHeight + 1;
+    var r = own ? strip.getBoundingClientRect() : { top: headerBottom(), bottom: innerHeight };
+    var edge = 56, step = 0;
+    if (sort.py < r.top + edge) step = -Math.ceil((r.top + edge - sort.py) / 5);
+    else if (sort.py > r.bottom - edge) step = Math.ceil((sort.py - r.bottom + edge) / 5);
+    if (step) {
+      if (own) strip.scrollTop += step; else window.scrollBy(0, step);
+      reorderAt(sort.px, sort.py);
+    }
+    sort.raf = requestAnimationFrame(edgeScroll);
+  }
+  function headerBottom() {
+    var h = document.querySelector("header.top");
+    return h && getComputedStyle(h).position === "sticky" ? h.getBoundingClientRect().bottom : 0;
   }
   function endSort() {
     if (!sort) return;
@@ -467,6 +558,8 @@
     if (sort.on) {
       eatClick = true;
       setTimeout(function () { eatClick = false; }, 0);
+      cancelAnimationFrame(sort.raf);
+      sort.ghost.remove();
       sort.pe.classList.remove("dragging");
       strip.classList.remove("sorting");
     }
@@ -475,25 +568,32 @@
   window.addEventListener("pointermove", function (e) {
     if (!sort) return;
     var moved = Math.abs(e.clientX - sort.x) + Math.abs(e.clientY - sort.y);
+    sort.px = e.clientX;
+    sort.py = e.clientY;
     if (!sort.on) {
       if (sort.mouse && moved > 6) startSort();
       else if (!sort.mouse && moved > 10) { clearTimeout(sort.timer); sort = null; } // a scroll
       if (!sort || !sort.on) return;
     }
     e.preventDefault();
-    var under = document.elementFromPoint(e.clientX, e.clientY);
+    moveGhost();
+    reorderAt(e.clientX, e.clientY);
+  });
+  function reorderAt(x, y) {
+    var under = document.elementFromPoint(x, y);
     var target = under && under.closest("[data-page]");
     if (!target || target === sort.pe || target.parentNode !== strip) return;
     var r = target.getBoundingClientRect();
-    var after = e.clientX > r.left + r.width / 2;
+    var after = x > r.left + r.width / 2;
     var ref = after ? target.nextSibling : target;
     if (ref !== sort.pe && ref !== sort.pe.nextSibling) {
       strip.insertBefore(sort.pe, ref);
       render();
     }
-  });
+  }
   window.addEventListener("pointerup", endSort);
   window.addEventListener("pointercancel", endSort);
+  window.addEventListener("blur", endSort);
   // While sorting on a touch screen, the finger moves the page, not the strip.
   strip.addEventListener("touchmove", function (e) { if (sort && sort.on) e.preventDefault(); }, { passive: false });
   strip.addEventListener("contextmenu", function (e) { if (sort) e.preventDefault(); });
@@ -537,4 +637,64 @@
     if (!img.complete) img.addEventListener("load", render, { once: true });
   });
   render();
+
+  // Several photos: ask once per draft how they should go on paper. Each
+  // choice shows its first sheet with the real photos and the sheet count.
+  // Picking one sets "Photos per sheet" below, where it can still change.
+  var count = pageEls().length;
+  if (album && count > 1 && !seenLayout()) {
+    var imgs = Array.prototype.slice.call(strip.querySelectorAll("img"));
+    var loaded = Promise.all(imgs.map(function (img) {
+      return img.complete ? null : new Promise(function (ok) { img.addEventListener("load", ok); img.addEventListener("error", ok); });
+    }));
+    Promise.race([loaded, new Promise(function (ok) { setTimeout(ok, 2000); })]).then(layoutDialog);
+  }
+  function seenLayout() {
+    try {
+      var k = "printty-layout-" + ed.dataset.job;
+      if (sessionStorage.getItem(k)) return true;
+      sessionStorage.setItem(k, "1");
+    } catch (e) {}
+    return false;
+  }
+  function layoutDialog() {
+    var choices = [1, 2, 3, 4, 6, 9].filter(function (n) { return n < count; }).map(String);
+    if (count <= 30) choices.push("all");
+    var cur = val("persheet") || "1";
+    var d = el("dialog", "confirm layout-pick");
+    d.setAttribute("aria-labelledby", "lp-title");
+    d.innerHTML = '<form method="dialog" class="stack"><h2 class="head" id="lp-title"></h2>' +
+      '<p class="small muted">Pick a layout. You can change it later under Photos per sheet.</p>' +
+      '<div class="lp-grid"></div><div class="confirm-acts"><button class="btn ghost" value="">Not now</button></div></form>';
+    d.querySelector("h2").textContent = "How should the " + count + " photos print?";
+    var gridEl = d.querySelector(".lp-grid"), included = includedPages(), base = options();
+    choices.forEach(function (c) {
+      var o = Object.assign({}, base, { oneSheet: c === "all", perSheet: c === "all" ? 1 : +c });
+      var pn = plan(o, included), n = pn.sheets.length;
+      var b = el("button", "lp-opt");
+      b.value = c;
+      b.setAttribute("aria-pressed", String(c === cur));
+      var holder = el("span", "lp-sheet");
+      var scale = 84 / Math.max(pn.pw, pn.ph);
+      var se = drawSheet(pn.sheets[0] || [], 0, pn.pw, pn.ph, scale, false, pn.bands[0]);
+      se.removeAttribute("aria-label");
+      if (n > 1) se.classList.add("more");
+      holder.appendChild(se);
+      var name = el("span", "lp-name");
+      name.textContent = c === "all" ? "All on one sheet" : c === "1" ? "1 per sheet" : c + " per sheet";
+      var sub = el("span", "lp-sub small muted");
+      sub.textContent = plural(n, "sheet");
+      b.append(holder, name, sub);
+      gridEl.appendChild(b);
+    });
+    d.addEventListener("click", function (e) { if (e.target === d) d.close(""); });
+    d.addEventListener("close", function () {
+      var c = d.returnValue, radio = c && form.querySelector('input[name="persheet"][value="' + c + '"]');
+      if (radio) { radio.checked = true; render(); }
+      d.remove();
+    });
+    document.body.appendChild(d);
+    d.showModal();
+    (gridEl.querySelector('[aria-pressed="true"]') || gridEl.firstChild).focus();
+  }
 })();

@@ -2,7 +2,18 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
-## [0.5.0] - 2026-11-25
+## [0.6.0] - 2026-11-25
+
+### Added
+- **Choose a layout for several photos.** Picking or sharing more than one photo asks how they should print, with a preview of each choice using your photos and its sheet count: 1, 2, 3, 4 per sheet, or all on one sheet. It can still be changed under Photos per sheet.
+- **Binding margin.** Leave 5 to 30 mm of blank paper on the left or right, measured from the paper's edge, to staple, punch or bind. On two-sided prints it moves to the other side on the back of each sheet, so it always lines up with the binding. The preview shows it, and requests show it to the owner.
+- **Linux and macOS print what the preview shows.** Printty now builds the finished sheets itself (with pdfcpu, pages stay sharp) and CUPS prints them as they are, so page order, turned pages, 3, 8 or all per sheet, moved photos and the binding margin work there too. Settings → Printer → "Who lays out the pages" switches back to letting CUPS arrange pages.
+
+### Changed
+- **Clearer page strip on phones.** Each page has a visible × to leave it out (+ to put it back), a count of what's in the print, and a handle to drag it to a new place: the page lifts and follows your finger while a dashed slot shows where it lands, and the page scrolls when you drag near an edge. On phones the strip is part of the page instead of a separate scrolling box.
+
+### Fixed
+- A second finger touching the page strip mid-drag no longer leaves a page stuck in the air.
 
 ### Added
 - **iPhone photos (HEIC/HEIF).** Pick .heic or .heif photos, including from the Files app: the browser turns them into JPEGs (upright, up to 16 megapixels) before they upload. Safari on iPhone, iPad and Mac can do this; browsers that can't open HEIC say so instead of failing.
