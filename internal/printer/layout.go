@@ -25,6 +25,10 @@ type Sheet []Placement
 
 const cellGap = 0.12 // inches between pages when several share a sheet
 
+// turnedWeight is how much a page turned by auto-rotate counts when packing
+// pages onto one sheet (see packGrid).
+const turnedWeight = 0.9
+
 // grid returns columns and rows for n pages per sheet, on a sheet that is
 // wider than tall or not.
 func grid(n int, wide bool) (cols, rows int) {
@@ -52,7 +56,7 @@ func grid(n int, wide bool) (cols, rows int) {
 // PerSheet normalises the pages-per-sheet option.
 func PerSheet(o Options) int {
 	switch o.PerSheet {
-	case 2, 4, 6, 9:
+	case 2, 3, 4, 6, 8, 9:
 		return o.PerSheet
 	}
 	return 1
@@ -77,6 +81,9 @@ func slots(o Options) int {
 
 // SheetSize is how many different source pages go on one sheet.
 func SheetSize(o Options) int {
+	if o.OneSheet {
+		return MaxPhotos
+	}
 	if RepeatCount(o) > 1 {
 		return 1
 	}
@@ -100,10 +107,30 @@ func SheetOrientation(o Options, firstW, firstH float64) Orientation {
 		return Portrait
 	}
 	n := PerSheet(o)
-	if n == 2 || n == 6 {
+	if n == 2 || n == 3 || n == 6 || n == 8 {
 		if firstW > firstH {
 			return Portrait // landscape pages stack on a portrait sheet
 		}
+		return Landscape
+	}
+	return Portrait
+}
+
+// PickOrientation is SheetOrientation for a whole job: with OneSheet it
+// takes whichever orientation shows all the pages biggest.
+func PickOrientation(o Options, pages []int, size func(page int) (w, h float64)) Orientation {
+	ps := realPages(pages)
+	if !o.OneSheet || o.Orientation == Portrait || o.Orientation == Landscape {
+		first := 1
+		if len(ps) > 0 {
+			first = ps[0]
+		}
+		fw, fh := pageSize(first, size)
+		return SheetOrientation(o, fw, fh)
+	}
+	_, _, port := packGrid(ps, size, 8, 11.4, o)
+	_, _, land := packGrid(ps, size, 11.4, 8, o)
+	if land > port*1.0001 {
 		return Landscape
 	}
 	return Portrait
@@ -127,6 +154,9 @@ func bestScale(n int, w, h float64, wide bool) float64 {
 // size returns a page's size in inches; areaW, areaH is the printable area of
 // the sheet in its final orientation.
 func Layout(pages []int, size func(page int) (w, h float64), areaW, areaH float64, o Options) []Sheet {
+	if o.OneSheet {
+		return []Sheet{oneSheet(realPages(pages), size, areaW, areaH, o)}
+	}
 	n := slots(o)
 	if r := RepeatCount(o); r > 1 {
 		// Each page fills a whole sheet with r copies of itself.
@@ -155,38 +185,142 @@ func Layout(pages []int, size func(page int) (w, h float64), areaW, areaH float6
 				continue
 			}
 			cell := Rect{X: float64(i%cols) * (cw + gap), Y: float64(i/cols) * (ch + gap), W: cw, H: ch}
-			w, h := size(p)
-			if w <= 0 || h <= 0 {
-				w, h = 8.27, 11.69
-			}
-			rot := pageRotation(p, w, h, cell, o)
-			if rot == 90 || rot == 270 {
-				w, h = h, w
-			}
-			var scale float64
-			switch o.Fit {
-			case Fill:
-				scale = math.Max(cell.W/w, cell.H/h)
-			case Actual:
-				scale = 1
-			default:
-				scale = math.Min(cell.W/w, cell.H/h)
-			}
-			if o.Scale > 0 && o.Scale < 100 {
-				scale *= float64(max(o.Scale, 10)) / 100
-			}
-			dw, dh := w*scale, h*scale
-			// Offsets move the page within its free space (or pan it when
-			// it's bigger than its space); 0 is centred.
-			fx, fy := (1+clamp1(o.OffX))/2, (1+clamp1(o.OffY))/2
-			sh = append(sh, Placement{
-				Page: p, Rotate: rot, Cell: cell,
-				Rect: Rect{X: cell.X + (cell.W-dw)*fx, Y: cell.Y + (cell.H-dh)*fy, W: dw, H: dh},
-			})
+			sh = append(sh, placeIn(p, cell, size, o, o.OffX, o.OffY))
 		}
 		sheets = append(sheets, sh)
 	}
 	return sheets
+}
+
+// placeIn sizes and turns page p for its cell. offX, offY move it within its
+// free space (or pan it when it's bigger than its space); 0 is centred.
+func placeIn(p int, cell Rect, size func(int) (float64, float64), o Options, offX, offY float64) Placement {
+	w, h := pageSize(p, size)
+	rot := pageRotation(p, w, h, cell, o)
+	if rot == 90 || rot == 270 {
+		w, h = h, w
+	}
+	var scale float64
+	switch o.Fit {
+	case Fill:
+		scale = math.Max(cell.W/w, cell.H/h)
+	case Actual:
+		scale = 1
+	default:
+		scale = math.Min(cell.W/w, cell.H/h)
+	}
+	if o.Scale > 0 && o.Scale < 100 {
+		scale *= float64(max(o.Scale, 10)) / 100
+	}
+	dw, dh := w*scale, h*scale
+	fx, fy := (1+clamp1(offX))/2, (1+clamp1(offY))/2
+	return Placement{
+		Page: p, Rotate: rot, Cell: cell,
+		Rect: Rect{X: cell.X + (cell.W-dw)*fx, Y: cell.Y + (cell.H-dh)*fy, W: dw, H: dh},
+	}
+}
+
+func pageSize(p int, size func(int) (float64, float64)) (float64, float64) {
+	w, h := size(p)
+	if w <= 0 || h <= 0 {
+		return 8.27, 11.69
+	}
+	return w, h
+}
+
+func realPages(pages []int) []int {
+	var out []int
+	for _, p := range pages {
+		if p > 0 {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// packGrid finds the columns and rows that show the pages biggest on an
+// areaW×areaH sheet: the most paper covered at Fit, a page turned to fit
+// counting a little less so photos stay upright when it's close. Ties go to
+// fewer columns.
+// The editor's preview (editor.js, packGrid) mirrors it.
+func packGrid(pages []int, size func(int) (float64, float64), areaW, areaH float64, o Options) (cols, rows int, score float64) {
+	n := len(pages)
+	if n == 0 {
+		return 1, 1, 0
+	}
+	cols, rows = 1, n
+	for c := 1; c <= n; c++ {
+		r := (n + c - 1) / c
+		if c > 1 && (n+c-2)/(c-1) == r {
+			continue // the same rows with fewer columns was already tried
+		}
+		cell := gridCell(c, r, areaW, areaH, n)
+		total := 0.0
+		for _, p := range pages {
+			w, h := pageSize(p, size)
+			weight := 1.0
+			if rot := pageRotation(p, w, h, cell, o); rot == 90 || rot == 270 {
+				w, h = h, w
+				if _, chosen := o.Rotate[p]; !chosen {
+					weight = turnedWeight
+				}
+			}
+			k := math.Min(cell.W/w, cell.H/h)
+			total += w * h * k * k * weight
+		}
+		if total > score*1.0001 {
+			cols, rows, score = c, r, total
+		}
+	}
+	return cols, rows, score
+}
+
+// gridCell is the size of one cell in a cols×rows grid holding n pages.
+func gridCell(cols, rows int, areaW, areaH float64, n int) Rect {
+	gap := 0.0
+	if n > 1 {
+		gap = cellGap
+	}
+	return Rect{W: (areaW - gap*float64(cols-1)) / float64(cols), H: (areaH - gap*float64(rows-1)) / float64(rows)}
+}
+
+// oneSheet lays every page out on one sheet in the best grid, with the last
+// row centred. A page's Cell is the part of it that shows; a page in o.Place
+// is moved there, kept inside the printable area.
+func oneSheet(pages []int, size func(int) (float64, float64), areaW, areaH float64, o Options) Sheet {
+	cols, rows, _ := packGrid(pages, size, areaW, areaH, o)
+	n := len(pages)
+	gap := 0.0
+	if n > 1 {
+		gap = cellGap
+	}
+	c := gridCell(cols, rows, areaW, areaH, n)
+	sh := Sheet{}
+	for i, p := range pages {
+		row, col := i/cols, i%cols
+		inRow := min(cols, n-row*cols)
+		shift := float64(cols-inRow) * (c.W + gap) / 2
+		cell := Rect{X: shift + float64(col)*(c.W+gap), Y: float64(row) * (c.H + gap), W: c.W, H: c.H}
+		pl := placeIn(p, cell, size, o, 0, 0)
+		pl.Cell = intersect(pl.Cell, pl.Rect)
+		if at, ok := o.Place[p]; ok {
+			nx := math.Max(0, math.Min(areaW-pl.Cell.W, clamp01(at[0])*areaW-pl.Cell.W/2))
+			ny := math.Max(0, math.Min(areaH-pl.Cell.H, clamp01(at[1])*areaH-pl.Cell.H/2))
+			dx, dy := nx-pl.Cell.X, ny-pl.Cell.Y
+			pl.Cell.X, pl.Cell.Y = nx, ny
+			pl.Rect.X, pl.Rect.Y = pl.Rect.X+dx, pl.Rect.Y+dy
+		}
+		sh = append(sh, pl)
+	}
+	return sh
+}
+
+func clamp01(v float64) float64 { return math.Max(0, math.Min(1, v)) }
+
+func intersect(a, b Rect) Rect {
+	x0, y0 := math.Max(a.X, b.X), math.Max(a.Y, b.Y)
+	x1, y1 := math.Min(a.X+a.W, b.X+b.W), math.Min(a.Y+a.H, b.Y+b.H)
+	return Rect{X: x0, Y: y0, W: math.Max(0, x1-x0), H: math.Max(0, y1-y0)}
 }
 
 // pageRotation is the person's choice for this page if they made one, else a

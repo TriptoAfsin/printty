@@ -235,7 +235,8 @@ form.is-busy .drop { opacity: .6; pointer-events: none; }
 .pg { display: flex; flex-direction: column; gap: 4px; }
 .pg-img { position: relative; aspect-ratio: 3 / 4; border: 0; padding: 6px; border-radius: var(--radius-control-in); background: var(--color-paper-2); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: inset 0 0 0 2px var(--color-accent); }
 .pg-img img { max-width: 100%; max-height: 100%; background: #fff; transition: transform var(--dur-short) var(--ease-out); box-shadow: 0 1px 3px oklch(20% 0.02 80 / .25); }
-.pg.turned .pg-img img { max-width: 133%; max-height: 75%; } /* the 3:4 box, seen sideways */
+.pg-img { container-type: size; }
+.pg.turned .pg-img img { max-width: 100cqh; max-height: 100cqw; } /* turned: its width runs along the box's height */
 .pg-blank { font-size: 1.1rem; color: var(--color-muted); }
 .pg.off .pg-img { box-shadow: inset 0 0 0 1.5px var(--color-ring); }
 .pg.off .pg-img img, .pg.off .pg-blank { opacity: .3; }
@@ -263,3 +264,9 @@ input.range { width: 100%; accent-color: var(--color-accent); height: 28px; }
 .sheet.can-drag .placed { cursor: grab; touch-action: none; }
 .sheet.can-drag .placed:active { cursor: grabbing; }
 .sheet.can-drag .placed::after { content: ""; position: absolute; inset: 0; outline: 1.5px dashed color-mix(in oklch, var(--color-accent) 60%, transparent); outline-offset: -1px; pointer-events: none; }
+
+/* reordering pages and photos */
+.pg-img, .pg-img img { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.pagestrip.sorting, .pagestrip.sorting .pg-img { cursor: grabbing; }
+.pg.dragging { opacity: .6; }
+.pg.dragging .pg-img { box-shadow: inset 0 0 0 2px var(--color-accent), var(--shadow-card); }

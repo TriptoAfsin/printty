@@ -2,26 +2,22 @@
 package server
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/TriptoAfsin/printty/internal/auth"
-	"github.com/TriptoAfsin/printty/internal/memtrim"
 	"github.com/TriptoAfsin/printty/internal/netinfo"
 	"github.com/TriptoAfsin/printty/internal/notify"
 	"github.com/TriptoAfsin/printty/internal/printer"
@@ -397,53 +393,6 @@ func sniff(head []byte) string {
 }
 
 var errBadFile = errors.New("Printty prints PDF, JPG and PNG files")
-
-// saveUpload stores the uploaded file under a random name and returns a draft job.
-func (s *Server) saveUpload(ctx context.Context, src io.Reader, filename string) (store.Job, error) {
-	head := make([]byte, 512)
-	n, _ := io.ReadFull(src, head)
-	head = head[:n]
-	kind := sniff(head)
-	if kind == "" {
-		return store.Job{}, errBadFile
-	}
-	id := store.NewID()
-	stored := id + "." + map[string]string{"pdf": "pdf", "png": "png", "jpeg": "jpg"}[kind]
-	path := filepath.Join(s.st.FilesDir(), stored)
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-	if err != nil {
-		return store.Job{}, err
-	}
-	size, err := io.Copy(f, io.MultiReader(strings.NewReader(string(head)), io.LimitReader(src, s.maxUp)))
-	f.Close()
-	if err != nil {
-		os.Remove(path)
-		return store.Job{}, fmt.Errorf("upload failed")
-	}
-	if size > s.maxUp {
-		os.Remove(path)
-		return store.Job{}, fmt.Errorf("That file is over %d MB", s.maxUp>>20)
-	}
-	var pages int
-	if in, ok := s.be.(printer.Inspector); ok {
-		// Count pages and draw the editor's previews in one worker run.
-		pages, err = in.Inspect(ctx, path, kind, s.st.PreviewDir(id), maxPreviews)
-	} else {
-		pages, err = s.be.PageCount(ctx, path, kind)
-	}
-	memtrim.Now()
-	if err != nil || pages < 1 {
-		os.Remove(path)
-		os.RemoveAll(s.st.PreviewDir(id))
-		return store.Job{}, fmt.Errorf("That PDF couldn't be opened. Is it password-protected or damaged?")
-	}
-	name := filepath.Base(strings.ReplaceAll(filename, "\\", "/"))
-	if name == "" || name == "." {
-		name = "document." + kind
-	}
-	return store.Job{ID: id, FileName: name, Kind: kind, StoredAs: stored, Size: size, DocPages: pages,
-		State: store.JobDraft, CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil
-}
 
 // ---- rate limiting (guests and logins)
 

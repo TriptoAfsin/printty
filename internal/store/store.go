@@ -93,6 +93,7 @@ type Job struct {
 	StoredAs  string          `json:"storedAs"`
 	Size      int64           `json:"size"`
 	DocPages  int             `json:"docPages"`
+	Photos    int             `json:"photos,omitempty"` // photos combined into this PDF, a page each
 	Options   printer.Options `json:"options"`
 	Printer   string          `json:"printer"`
 	State     JobState        `json:"state"`

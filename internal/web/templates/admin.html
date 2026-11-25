@@ -31,6 +31,7 @@
               <span class="tag">{{.Options.Paper}}</span>
               {{if ne .Options.Duplex "one-sided"}}<span class="tag">Two-sided, manual flip</span>{{end}}
               <span class="tag">{{plural .Options.Copies "copy"}}</span>
+              {{if .Options.OneSheet}}<span class="tag">All on one sheet</span>{{end}}
             </div>
           </div>
           <div class="acts">

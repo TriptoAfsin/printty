@@ -58,8 +58,19 @@ func driverOptions(ctx context.Context, name string) []DriverOption {
 
 var safeValue = regexp.MustCompile(`^[A-Za-z0-9_.:+-]+$`)
 
-// layoutArgs maps the shared layout and driver options to lp -o arguments.
-func layoutArgs(o Options) []string {
+// cupsNumberUp is the smallest number-up CUPS supports that holds n pages.
+func cupsNumberUp(n int) int {
+	for _, k := range []int{1, 2, 4, 6, 9, 16} {
+		if n <= k {
+			return k
+		}
+	}
+	return 16
+}
+
+// layoutArgs maps the shared layout and driver options to lp -o arguments;
+// pages is how many pages the job prints.
+func layoutArgs(o Options, pages int) []string {
 	var args []string
 	switch o.Orientation {
 	case Portrait:
@@ -75,11 +86,15 @@ func layoutArgs(o Options) []string {
 	default:
 		args = append(args, "-o", "print-scaling=fit")
 	}
-	if n := PerSheet(o); n > 1 {
+	n := PerSheet(o)
+	if o.OneSheet {
+		n = pages
+	}
+	if n = cupsNumberUp(n); n > 1 {
 		args = append(args, "-o", "number-up="+strconv.Itoa(n))
 	}
-	// CUPS scales images by percent of the page; copies on one sheet and
-	// dragging a photo aren't available through lp.
+	// CUPS scales images by percent of the page; copies on one sheet,
+	// dragging a photo and a custom page order aren't available through lp.
 	if o.Scale > 0 && o.Scale < 100 {
 		args = append(args, "-o", "scaling="+strconv.Itoa(o.Scale))
 	}

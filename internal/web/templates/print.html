@@ -1,5 +1,5 @@
 {{define "content"}}
-{{$photo := false}}{{with .Data.Draft}}{{if ne .Kind "pdf"}}{{$photo = true}}{{end}}{{end}}
+{{$photo := false}}{{$album := false}}{{with .Data.Draft}}{{if ne .Kind "pdf"}}{{$photo = true}}{{end}}{{if .Photos}}{{$photo = true}}{{$album = true}}{{end}}{{end}}
 <main class="wrap">
   <div>
     <h1 class="head">Print</h1>
@@ -13,26 +13,26 @@
       {{if .Data.Previews}}<img class="thumb-img" src="/jobs/{{.Data.Draft.ID}}/page/1" alt="">{{else}}<span class="thumb" aria-hidden="true"><i></i><i></i><i></i><i></i></span>{{end}}
       <div class="grow">
         <div class="fname">{{.Data.Draft.FileName}}</div>
-        <div class="small muted">{{plural .Data.Draft.DocPages "page"}}</div>
+        <div class="small muted">{{if $album}}{{plural .Data.Draft.Photos "photo"}}{{else}}{{plural .Data.Draft.DocPages "page"}}{{end}}</div>
       </div>
       <a class="small" href="/">Change</a>
     </div>
 
-    <section class="card stack editor" data-editor data-job="{{.Data.Draft.ID}}">
+    <section class="card stack editor" data-editor data-job="{{.Data.Draft.ID}}" {{if $album}}data-album{{end}}>
       <div class="row between"><span class="fname">Preview</span><span class="small muted" data-sheet-count></span></div>
       <div class="sheets" data-sheets aria-live="polite"></div>
     </section>
 
     <section class="card stack">
-      <div class="row between"><span class="fname">Pages</span><span class="small muted">Tap a page to leave it out. ↻ turns it.</span></div>
+      <div class="row between"><span class="fname">{{if $album}}Photos{{else}}Pages{{end}}</span><span class="small muted">Tap to leave out, ↻ to turn, drag to reorder.</span></div>
       <div class="pagestrip" data-pagestrip>
         {{$id := .Data.Draft.ID}}{{$prev := .Data.Previews}}
         {{range .Data.Pages}}
         <div class="pg" data-page="{{.}}">
-          <button type="button" class="pg-img" data-toggle aria-pressed="true" aria-label="Page {{.}}: included. Tap to leave out">
-            {{if le . (len $prev)}}<img src="/jobs/{{$id}}/page/{{.}}" alt="">{{else}}<span class="pg-blank">{{.}}</span>{{end}}
+          <button type="button" class="pg-img" data-toggle aria-pressed="true" aria-label="{{if $album}}Photo{{else}}Page{{end}} {{.}}: included. Tap to leave out" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight">
+            {{if le . (len $prev)}}<img src="/jobs/{{$id}}/page/{{.}}" alt="" draggable="false">{{else}}<span class="pg-blank">{{.}}</span>{{end}}
           </button>
-          <div class="pg-foot"><span>{{.}}</span><button type="button" class="pg-rot" data-rotate aria-label="Turn page {{.}} a quarter turn">↻</button></div>
+          <div class="pg-foot"><span data-pos>{{.}}</span><button type="button" class="pg-rot" data-rotate aria-label="Turn {{if $album}}photo{{else}}page{{end}} {{.}} a quarter turn">↻</button></div>
         </div>
         {{end}}
       </div>
@@ -43,10 +43,10 @@
       <span class="thumb" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       <div class="grow">
         <div class="fname" id="picked">Choose a file</div>
-        <div class="small muted">PDF, JPG or PNG</div>
+        <div class="small muted">A PDF, or one or more photos (JPG, PNG)</div>
       </div>
       <span class="pick">Browse</span>
-      <input type="file" name="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" data-name="picked" required>
+      <input type="file" name="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" data-name="picked" multiple required>
     </label>
     {{end}}
 
@@ -87,7 +87,21 @@
       </div>
     </fieldset>
 
-    {{if $photo}}
+    {{if $album}}
+    <fieldset class="field">
+      <legend>Photos per sheet</legend>
+      <div class="seg">
+        <label><input type="radio" name="persheet" value="1" checked>1</label>
+        <label><input type="radio" name="persheet" value="2">2</label>
+        <label><input type="radio" name="persheet" value="3">3</label>
+        <label><input type="radio" name="persheet" value="4">4</label>
+        <label><input type="radio" name="persheet" value="6">6</label>
+        <label><input type="radio" name="persheet" value="9">9</label>
+        <label><input type="radio" name="persheet" value="all">All</label>
+      </div>
+    </fieldset>
+    <input type="hidden" name="place" value="">
+    {{else if $photo}}
     <fieldset class="field">
       <legend>Copies on one sheet</legend>
       <div class="seg">
@@ -99,13 +113,15 @@
         <label><input type="radio" name="repeat" value="8">8</label>
       </div>
     </fieldset>
+    {{end}}
+    {{if $photo}}
     <div class="field">
       <label class="label row between" for="scale"><span>Image size</span><span class="muted" data-scale-out>100%</span></label>
       <input class="range" type="range" id="scale" name="scale" min="10" max="100" step="5" value="100">
     </div>
     <input type="hidden" name="offx" value="0">
     <input type="hidden" name="offy" value="0">
-    <div class="row between photo-hint"><span class="small muted">Drag the photo in the preview to move it.</span><button class="btn ghost sm" type="button" data-center>Centre</button></div>
+    <div class="row between photo-hint"><span class="small muted" data-drag-hint>Drag the photo in the preview to move it.</span><button class="btn ghost sm" type="button" data-center>Centre</button></div>
     {{else}}
     <fieldset class="field">
       <legend>Pages per sheet</legend>

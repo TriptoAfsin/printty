@@ -27,7 +27,7 @@ type Options struct {
 	// Layout, applied the same way on every OS (see layout.go).
 	Orientation  Orientation `json:"orientation,omitempty"`  // "" = auto
 	Fit          Fit         `json:"fit,omitempty"`          // "" = fit the page
-	PerSheet     int         `json:"perSheet,omitempty"`     // pages per sheet: 1 (or 0), 2, 4, 6, 9
+	PerSheet     int         `json:"perSheet,omitempty"`     // pages per sheet: 1 (or 0), 2, 3, 4, 6, 8, 9
 	NoAutoRotate bool        `json:"noAutoRotate,omitempty"` // don't turn pages to suit the sheet
 	Rotate       map[int]int `json:"rotate,omitempty"`       // page -> clockwise degrees; overrides auto-rotate
 
@@ -36,6 +36,12 @@ type Options struct {
 	Scale  int     `json:"scale,omitempty"`  // percent of the size Fit/Fill/Actual gives: 10-100 (0 = 100)
 	OffX   float64 `json:"offX,omitempty"`   // position in the free space: -1 left, 0 centre, 1 right
 	OffY   float64 `json:"offY,omitempty"`   // -1 top, 0 centre, 1 bottom
+
+	// OneSheet puts every chosen page on one sheet in the grid that shows
+	// them biggest (photo sets). Place moves single pages on that sheet:
+	// page -> centre as a fraction of the printable area, 0..1 each way.
+	OneSheet bool               `json:"oneSheet,omitempty"`
+	Place    map[int][2]float64 `json:"place,omitempty"`
 
 	// Driver holds printer-specific choices by Caps.Options key (paper type,
 	// paper source, quality...). Each backend maps them to its own system.

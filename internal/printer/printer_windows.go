@@ -535,16 +535,9 @@ func (w *Windows) printLocked(ctx context.Context, job Job) error {
 		}
 	}
 
-	// The sheet orientation follows the first page (see layout.go).
-	first := 1
-	for _, p := range pages {
-		if p > 0 {
-			first = p
-			break
-		}
-	}
-	fw, fh := src.size(first - 1)
-	orient := SheetOrientation(job.Options, fw, fh)
+	// The sheet orientation follows the first page, or all of them on one
+	// sheet (see layout.go).
+	orient := PickOrientation(job.Options, pages, func(p int) (float64, float64) { return src.size(p - 1) })
 
 	h, err := openPrinter(job.Printer)
 	if err != nil {

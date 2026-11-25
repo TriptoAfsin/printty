@@ -2,6 +2,20 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [0.4.0] - 2026-11-25
+
+### Added
+- **Several photos at once.** Pick, or share from another app, up to 30 photos together: they become one document with a page per photo (JPEGs kept exactly as they are, PNGs lossless).
+- **Reorder pages** by dragging them in the page strip (hold, then drag, on a phone; Alt+arrow keys on a keyboard). Works for PDFs too. The preview and the print follow the new order.
+- **Photos per sheet** for photo sets: 1, 2, 3, 4, 6, 9, or **All on one sheet**, which picks the grid and orientation that show every photo biggest, keeping photos upright when it's close. Drag any photo in the preview to move it on that sheet; Line up puts them back in the grid. Requests show "All on one sheet" to the owner.
+
+### Fixed
+- A portrait page turned sideways in the page strip no longer spills out of its tile.
+- The installed app (PWA) now picks up the new print editor instead of keeping an older copy of it.
+
+### Notes
+- Linux and macOS (CUPS) print photo sets in their original order, use the nearest number-up CUPS supports for 3, 8 or all per sheet, and ignore dragged positions.
+
 ## [0.3.0] - 2026-11-24
 
 ### Added

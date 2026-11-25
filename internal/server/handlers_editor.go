@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -30,30 +31,18 @@ func (s *Server) postUpload(w http.ResponseWriter, r *http.Request) {
 		s.printError(w, r, v, nil, "Too many uploads. Try again in a while.")
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, s.maxUp+(1<<20))
-	mr, err := r.MultipartReader()
+	files, _, err := s.readForm(w, r, false)
 	if err != nil {
-		s.printError(w, r, v, nil, "That upload didn't work. Try again.")
+		s.printError(w, r, v, nil, err.Error())
 		return
 	}
-	for {
-		part, err := mr.NextPart()
-		if err != nil {
-			break
-		}
-		if part.FormName() != "file" || part.FileName() == "" {
-			continue
-		}
-		j, err := s.saveUpload(r.Context(), part, part.FileName())
-		if err != nil {
-			s.printError(w, r, v, nil, err.Error())
-			return
-		}
-		s.saveDraft(j, v)
-		http.Redirect(w, r, "/?draft="+j.ID, http.StatusSeeOther)
+	j, err := s.makeJob(r.Context(), files)
+	if err != nil {
+		s.printError(w, r, v, nil, err.Error())
 		return
 	}
-	s.printError(w, r, v, nil, "Choose a PDF or photo to print.")
+	s.saveDraft(j, v)
+	http.Redirect(w, r, "/?draft="+j.ID, http.StatusSeeOther)
 }
 
 // getPagePreview serves one page preview of a job, to its owner or the admin.
@@ -109,13 +98,38 @@ func parseLayout(f map[string]string, docPages int, caps printer.Caps, o *printe
 	case printer.Actual:
 		o.Fit = printer.Actual
 	}
-	if n, err := strconv.Atoi(f["persheet"]); err == nil {
+	if f["persheet"] == "all" {
+		pages, err := printer.ParsePages(o.Pages, docPages)
+		if err != nil || len(pages) > printer.MaxPhotos {
+			return fmt.Errorf("Up to %d pages fit on one sheet. Leave some out, or pick fewer per sheet.", printer.MaxPhotos)
+		}
+		o.OneSheet = true
+		if spec := strings.TrimSpace(f["place"]); spec != "" {
+			o.Place = map[int][2]float64{}
+			for _, item := range strings.Split(spec, ",") {
+				parts := strings.Split(strings.TrimSpace(item), ":")
+				if len(parts) != 3 {
+					return errors.New("Couldn't read where the photos go. Try again.")
+				}
+				p, err1 := strconv.Atoi(parts[0])
+				x, err2 := strconv.ParseFloat(parts[1], 64)
+				y, err3 := strconv.ParseFloat(parts[2], 64)
+				if err1 != nil || err2 != nil || err3 != nil || p < 1 || p > docPages || math.IsNaN(x) || math.IsNaN(y) || len(o.Place) >= printer.MaxPhotos {
+					return errors.New("Couldn't read where the photos go. Try again.")
+				}
+				o.Place[p] = [2]float64{round3(math.Max(0, math.Min(1, x))), round3(math.Max(0, math.Min(1, y)))}
+			}
+			if len(o.Place) == 0 {
+				o.Place = nil
+			}
+		}
+	} else if n, err := strconv.Atoi(f["persheet"]); err == nil {
 		o.PerSheet = printer.PerSheet(printer.Options{PerSheet: n})
 		if o.PerSheet == 1 {
 			o.PerSheet = 0
 		}
 	}
-	if n, err := strconv.Atoi(f["repeat"]); err == nil {
+	if n, err := strconv.Atoi(f["repeat"]); err == nil && !o.OneSheet {
 		o.Repeat = printer.RepeatCount(printer.Options{Repeat: n})
 		if o.Repeat == 1 {
 			o.Repeat = 0
@@ -126,7 +140,7 @@ func parseLayout(f map[string]string, docPages int, caps printer.Caps, o *printe
 	}
 	for key, dst := range map[string]*float64{"offx": &o.OffX, "offy": &o.OffY} {
 		if v, err := strconv.ParseFloat(f[key], 64); err == nil && !math.IsNaN(v) {
-			*dst = math.Max(-1, math.Min(1, math.Round(v*1000)/1000))
+			*dst = math.Max(-1, math.Min(1, round3(v)))
 		}
 	}
 	// The checkbox is in every form; unticked sends nothing.
@@ -162,3 +176,5 @@ func parseLayout(f map[string]string, docPages int, caps printer.Caps, o *printe
 	}
 	return nil
 }
+
+func round3(v float64) float64 { return math.Round(v*1000) / 1000 }

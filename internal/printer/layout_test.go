@@ -191,3 +191,105 @@ func TestLayoutScaleAndOffset(t *testing.T) {
 		t.Errorf("offset 1,1 (clamped) should touch the bottom-right: %+v", bottomRight.Rect)
 	}
 }
+
+func TestLayoutOneSheet(t *testing.T) {
+	land := [2]float64{6, 4}
+	port := [2]float64{4, 6}
+	inside := func(t *testing.T, sh Sheet) {
+		t.Helper()
+		for _, pl := range sh {
+			c := pl.Cell
+			if c.X < -0.001 || c.Y < -0.001 || c.X+c.W > areaW+0.001 || c.Y+c.H > areaH+0.001 {
+				t.Errorf("page %d outside the paper: %+v", pl.Page, c)
+			}
+		}
+	}
+	t.Run("four portrait photos make a 2x2 grid", func(t *testing.T) {
+		size := sizes(map[int][2]float64{1: port, 2: port, 3: port, 4: port})
+		sheets := Layout([]int{1, 2, 3, 4}, size, areaW, areaH, Options{OneSheet: true})
+		if len(sheets) != 1 || len(sheets[0]) != 4 {
+			t.Fatalf("got %d sheets", len(sheets))
+		}
+		sh := sheets[0]
+		inside(t, sh)
+		if !near(sh[0].Cell.Y, sh[1].Cell.Y) || near(sh[0].Cell.Y, sh[2].Cell.Y) {
+			t.Errorf("not two rows of two: %+v", sh)
+		}
+	})
+	t.Run("three landscape photos stack on portrait paper", func(t *testing.T) {
+		size := sizes(map[int][2]float64{1: land, 2: land, 3: land})
+		sh := Layout([]int{1, 2, 3}, size, areaW, areaH, Options{OneSheet: true})[0]
+		inside(t, sh)
+		for i, pl := range sh {
+			if pl.Rotate != 0 || !near(pl.Rect.X+pl.Rect.W/2, areaW/2) || !near(pl.Rect.H, (areaH-2*cellGap)/3) {
+				t.Errorf("photo %d: rotate %d at %+v, want upright, one column, a third of the height", i+1, pl.Rotate, pl.Rect)
+			}
+		}
+	})
+	t.Run("a short last row is centred", func(t *testing.T) {
+		size := sizes(map[int][2]float64{1: port, 2: port, 3: port})
+		sh := Layout([]int{1, 2, 3}, size, areaW, areaH, Options{OneSheet: true})[0]
+		mid := sh[2].Cell.X + sh[2].Cell.W/2
+		if !near(mid, areaW/2) {
+			t.Errorf("last photo centre %.2f, want %.2f", mid, areaW/2)
+		}
+	})
+	t.Run("the order given is the order placed", func(t *testing.T) {
+		sh := Layout([]int{3, 1, 2}, sizes(nil), areaW, areaH, Options{OneSheet: true})[0]
+		if sh[0].Page != 3 || sh[1].Page != 1 || sh[2].Page != 2 {
+			t.Errorf("order %d %d %d", sh[0].Page, sh[1].Page, sh[2].Page)
+		}
+	})
+	t.Run("a moved photo goes where it was put, inside the paper", func(t *testing.T) {
+		size := sizes(map[int][2]float64{1: port, 2: port})
+		o := Options{OneSheet: true, Scale: 50, Place: map[int][2]float64{2: {0.5, 0.5}, 1: {1, 1}}}
+		sh := Layout([]int{1, 2}, size, areaW, areaH, o)[0]
+		inside(t, sh)
+		c := sh[1].Cell
+		if !near(c.X+c.W/2, areaW/2) || !near(c.Y+c.H/2, areaH/2) {
+			t.Errorf("photo 2 at %+v, want centred", c)
+		}
+		if !near(c.W, sh[1].Rect.W) || !near(c.H, sh[1].Rect.H) {
+			t.Errorf("box %+v isn't the photo %+v", c, sh[1].Rect)
+		}
+		if c1 := sh[0].Cell; !near(c1.X+c1.W, areaW) || !near(c1.Y+c1.H, areaH) {
+			t.Errorf("photo 1 at %+v, want in the bottom-right corner", c1)
+		}
+	})
+	t.Run("one sheet counts as one sheet", func(t *testing.T) {
+		o := Options{OneSheet: true}
+		if n := Sheets(12, o); n != 1 {
+			t.Errorf("Sheets = %d", n)
+		}
+	})
+}
+
+func TestPickOrientation(t *testing.T) {
+	land := [2]float64{6, 4}
+	size := sizes(map[int][2]float64{1: land, 2: land})
+	if got := PickOrientation(Options{OneSheet: true}, []int{1, 2}, size); got != Portrait {
+		t.Errorf("two landscape photos: %q, want portrait (stacked)", got)
+	}
+	size = sizes(map[int][2]float64{1: {4, 6}, 2: {4, 6}})
+	if got := PickOrientation(Options{OneSheet: true}, []int{1, 2}, size); got != Landscape {
+		t.Errorf("two portrait photos: %q, want landscape (side by side)", got)
+	}
+	if got := PickOrientation(Options{PerSheet: 3}, []int{1}, sizes(map[int][2]float64{1: land})); got != Portrait {
+		t.Errorf("3 per sheet of landscape pages: %q, want portrait", got)
+	}
+	if got := PickOrientation(Options{OneSheet: true, Orientation: Landscape}, []int{1, 2}, size); got != Landscape {
+		t.Errorf("a chosen orientation is kept: %q", got)
+	}
+}
+
+func TestPerSheetThreeAndEight(t *testing.T) {
+	for _, n := range []int{3, 8} {
+		if PerSheet(Options{PerSheet: n}) != n {
+			t.Errorf("PerSheet(%d) not allowed", n)
+		}
+		sheets := Layout([]int{1, 2, 3, 4, 5, 6, 7, 8, 9}, sizes(nil), areaW, areaH, Options{PerSheet: n})
+		if want := (9 + n - 1) / n; len(sheets) != want {
+			t.Errorf("%d per sheet: %d sheets, want %d", n, len(sheets), want)
+		}
+	}
+}

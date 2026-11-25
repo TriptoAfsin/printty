@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -134,39 +133,19 @@ func (s *Server) postPrint(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, s.maxUp+(1<<20))
-	fields := map[string]string{}
-	var job *store.Job
-	var upErr error
-	mr, err := r.MultipartReader()
+	files, fields, err := s.readForm(w, r, false)
 	if err != nil {
-		s.printError(w, r, v, nil, "That upload didn't work. Try again.")
+		s.printError(w, r, v, nil, err.Error())
 		return
 	}
-	for {
-		part, err := mr.NextPart()
-		if err == io.EOF {
-			break
-		}
+	var job *store.Job
+	if len(files) > 0 {
+		j, err := s.makeJob(r.Context(), files)
 		if err != nil {
-			upErr = errors.New("The upload was interrupted or too large.")
-			break
+			s.printError(w, r, v, nil, err.Error())
+			return
 		}
-		if part.FormName() == "file" && part.FileName() != "" && job == nil {
-			j, err := s.saveUpload(r.Context(), part, part.FileName())
-			if err != nil {
-				upErr = err
-			} else {
-				job = &j
-			}
-			continue
-		}
-		b, _ := io.ReadAll(io.LimitReader(part, 8192))
-		fields[part.FormName()] = string(b)
-	}
-	if upErr != nil {
-		s.printError(w, r, v, nil, upErr.Error())
-		return
+		job = &j
 	}
 	if job == nil && fields["draft"] != "" {
 		if j, err := s.st.Job(fields["draft"]); err == nil && j.State == store.JobDraft && s.owns(v, j) {
@@ -261,32 +240,22 @@ func (s *Server) postShare(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Too many shares. Try again later.", http.StatusTooManyRequests)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, s.maxUp+(1<<20))
-	mr, err := r.MultipartReader()
+	files, _, err := s.readForm(w, r, true)
+	if err == nil && len(files) == 0 {
+		err = errors.New("Nothing to print was shared.")
+	}
+	var j store.Job
+	if err == nil {
+		j, err = s.makeJob(r.Context(), files)
+	}
 	if err != nil {
-		back(w, r, "/", "")
+		http.Redirect(w, r, "/?shareError="+url.QueryEscape(err.Error()), http.StatusSeeOther)
 		return
 	}
-	for {
-		part, err := mr.NextPart()
-		if err != nil {
-			break
-		}
-		if part.FileName() == "" {
-			continue
-		}
-		j, err := s.saveUpload(r.Context(), part, part.FileName())
-		if err != nil {
-			http.Redirect(w, r, "/?shareError="+url.QueryEscape(err.Error()), http.StatusSeeOther)
-			return
-		}
-		claim := store.RandomToken(8)
-		j.GuestKey = "share:" + claim
-		s.st.AddJob(j)
-		http.Redirect(w, r, "/?draft="+j.ID+"&claim="+claim, http.StatusSeeOther)
-		return
-	}
-	http.Redirect(w, r, "/?shareError="+url.QueryEscape("Nothing to print was shared."), http.StatusSeeOther)
+	claim := store.RandomToken(8)
+	j.GuestKey = "share:" + claim
+	s.st.AddJob(j)
+	http.Redirect(w, r, "/?draft="+j.ID+"&claim="+claim, http.StatusSeeOther)
 }
 
 func (s *Server) getQueue(w http.ResponseWriter, r *http.Request) {

@@ -21,13 +21,14 @@ import (
 
 // Request is what the parent sends on the child's stdin.
 type Request struct {
-	Op      string      `json:"op"` // print, pages, inspect, caps, selftest
+	Op      string      `json:"op"` // print, pages, inspect, compose, caps, selftest
 	Job     printer.Job `json:"job,omitempty"`
 	Path    string      `json:"path,omitempty"`
 	Kind    string      `json:"kind,omitempty"`
 	Printer string      `json:"printer,omitempty"`
-	Dir     string      `json:"dir,omitempty"` // inspect: where previews go
-	Max     int         `json:"max,omitempty"` // inspect: previews for at most this many pages
+	Dir     string      `json:"dir,omitempty"`   // inspect: where previews go
+	Max     int         `json:"max,omitempty"`   // inspect: previews for at most this many pages
+	Paths   []string    `json:"paths,omitempty"` // compose: the photos, in order (Path is the PDF written)
 }
 
 // Response is what the child writes on stdout.
@@ -61,6 +62,8 @@ func Serve(in io.Reader, out io.Writer) int {
 		} else {
 			resp.Pages, err = be.PageCount(ctx, req.Path, req.Kind)
 		}
+	case "compose":
+		resp.Pages, err = printer.ComposePhotos(ctx, req.Paths, req.Path, req.Dir, req.Max)
 	case "selftest":
 		resp.Message, err = printer.SelfTest()
 	case "caps":
@@ -181,6 +184,13 @@ func (b *Backend) Print(ctx context.Context, job printer.Job) error {
 // Inspect counts pages and writes previews in a child process.
 func (b *Backend) Inspect(ctx context.Context, path, kind, dir string, max int) (int, error) {
 	resp, err := b.call(ctx, Request{Op: "inspect", Path: path, Kind: kind, Dir: dir, Max: max})
+	return resp.Pages, err
+}
+
+// Compose combines photos into one PDF in a child process: decoding photos
+// takes far more memory than the server should keep.
+func (b *Backend) Compose(ctx context.Context, paths []string, out, dir string, max int) (int, error) {
+	resp, err := b.call(ctx, Request{Op: "compose", Paths: paths, Path: out, Dir: dir, Max: max})
 	return resp.Pages, err
 }
 

@@ -129,7 +129,7 @@ func (CUPS) Print(ctx context.Context, job Job) error {
 	if m := cupsMedia(job.Options.Paper); m != "" {
 		args = append(args, "-o", "media="+m)
 	}
-	args = append(args, layoutArgs(job.Options)...)
+	args = append(args, layoutArgs(job.Options, max(len(realPages(job.PageList)), 1))...)
 	args = append(args, job.Path)
 	_, err := run(ctx, "lp", args...)
 	return err

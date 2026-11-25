@@ -102,6 +102,7 @@ For printers without a duplex unit (the G1010):
 
 1. PDF to page images: `Windows.Data.Pdf` (WinRT, built into Windows 10/11), called from Go through COM/WinRT interop. No bundled PDF engine.
 2. Images (JPG/PNG): decoded with Go's standard library; skip step 1.
+   Several photos sent together are first combined into one PDF, a page per photo (`internal/printer/photos.go`, in the worker): JPEGs are embedded as they are (`DCTDecode`), PNGs stored losslessly (`FlateDecode`, with a soft mask for transparency), each page sized as the photo at 300 dpi. From then on the job is an ordinary PDF on every OS, with `Job.Photos` set so the editor offers photo controls.
 3. Printing: Win32 via `golang.org/x/sys/windows` — `OpenPrinter`, `DocumentProperties` to get and modify the printer's `DEVMODE` (`dmDuplex`, `dmColor`, `dmPaperSize`, `dmCopies`), `CreateDC`, `StartDoc`/`StartPage`, `StretchDIBits`, `EndPage`/`EndDoc`.
 4. Pages are rendered at the printer's DPI (300 by default) and scaled to the printable area.
 
@@ -110,6 +111,8 @@ Risk to retire in phase 0: `Windows.Data.Pdf` must work in a service running in 
 ### Linux and macOS (`printer_unix.go`)
 
 `lp -d <printer> -n <copies> -P <pages> -o sides=<one-sided|two-sided-long-edge|two-sided-short-edge> -o print-color-mode=<color|monochrome> -o media=<size> <file>`. Printer list and status from `lpstat`. CUPS renders PDFs itself.
+
+CUPS lays pages out itself, so some of the shared layout is approximate there: pages print in document order (a reordered page list is a Windows feature), "all on one sheet" and 3 or 8 per sheet become the next `number-up` CUPS supports (2, 4, 6, 9, 16), and dragged positions are not applied.
 
 ### Later: direct IPP
 
@@ -161,7 +164,7 @@ The UI is an installable Progressive Web App, so people can share files to Print
     "params": { "title": "title", "text": "text", "files": [{ "name": "file", "accept": ["application/pdf", "image/jpeg", "image/png"] }] }
   }
   ```
-- `POST /share`: the server stores the shared file as a **draft** (not yet a job), then redirects `303` to `/print?draft=<id>`, where the person picks options and confirms. Shared files never print without that confirmation. Drafts expire after an hour.
+- `POST /share`: the server stores the shared file (or several shared photos, combined into one PDF) as a **draft** (not yet a job), then redirects `303` to `/print?draft=<id>`, where the person picks options and confirms. Shared files never print without that confirmation. Drafts expire after an hour.
 - Auth: if the session cookie is missing on `/share`, the server keeps the draft, redirects to login (or to the guest form, if guests are enabled), and returns to the draft afterwards. A shared file then follows the same approval rules as an upload.
 - Service worker (`sw.js`): caches the app shell so the PWA opens instantly and shows "Printty is unreachable" when the server is down, instead of a browser error. It does not cache API responses or uploaded files.
 - Platform support: Web Share Target works in Chrome/Edge on Android and desktop. iOS Safari can install the PWA but does not support share targets; iOS users upload from the page (a later option is an iOS Shortcut that posts to `/share`).
