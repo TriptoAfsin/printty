@@ -28,8 +28,64 @@
       }
       if (out) out.textContent = fs.length > 1 ? "Preparing " + fs.length + " photos…" : "Preparing " + fs[0].name + "…";
       upForm.classList.add("is-busy");
-      upForm.action = upForm.dataset.upload;
-      upForm.submit();
+      heicToJPEG(Array.prototype.slice.call(fs)).then(function (list) {
+        if (list) {
+          var dt = new DataTransfer();
+          list.forEach(function (f) { dt.items.add(f); });
+          fileIn.files = dt.files;
+        }
+        upForm.action = upForm.dataset.upload;
+        upForm.submit();
+      }, function () {
+        upForm.classList.remove("is-busy");
+        fileIn.value = "";
+        if (out) out.textContent = "This browser can't open HEIC photos. Choose them from Photos on the iPhone, or save them as JPG first";
+      });
+    });
+  }
+
+  // iPhone photos (HEIC/HEIF) are turned into JPEGs here, since the server
+  // reads only PDF, JPG and PNG. The browser decodes them (Safari can; most
+  // others can't, which rejects the promise). Drawing applies the EXIF
+  // rotation, so the JPEG comes out upright. Resolves to null when nothing
+  // needed converting.
+  function isHEIC(f) {
+    return /^image\/hei[cf](-sequence)?$/i.test(f.type) || /\.hei[cf]$/i.test(f.name);
+  }
+  function heicToJPEG(files) {
+    if (!files.some(isHEIC)) return Promise.resolve(null);
+    if (typeof DataTransfer !== "function") return Promise.reject(new Error("no DataTransfer"));
+    var done = Promise.resolve([]);
+    files.forEach(function (f) {
+      done = done.then(function (acc) {
+        if (!isHEIC(f)) return acc.concat(f);
+        return toJPEG(f).then(function (j) { return acc.concat(j); });
+      });
+    });
+    return done;
+  }
+  var MAX_PIXELS = 16e6; // iOS Safari refuses canvases above ~16.7 MP; still >300 dpi on A4
+  function toJPEG(f) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(f);
+      var img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var s = Math.min(1, Math.sqrt(MAX_PIXELS / (w * h)));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(w * s));
+        c.height = Math.max(1, Math.round(h * s));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) {
+          c.width = c.height = 0; // free the canvas memory before the next photo
+          if (!b) return reject(new Error("encode failed"));
+          var name = f.name.replace(/\.[^.]*$/, "") + ".jpg";
+          resolve(new File([b], name, { type: "image/jpeg", lastModified: f.lastModified }));
+        }, "image/jpeg", 0.92);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("decode failed")); };
+      img.src = url;
     });
   }
 

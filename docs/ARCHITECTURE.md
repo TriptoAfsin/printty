@@ -101,7 +101,7 @@ For printers without a duplex unit (the G1010):
 ### Windows (`printer_windows.go`)
 
 1. PDF to page images: `Windows.Data.Pdf` (WinRT, built into Windows 10/11), called from Go through COM/WinRT interop. No bundled PDF engine.
-2. Images (JPG/PNG): decoded with Go's standard library; skip step 1.
+2. Images (JPG/PNG): decoded with Go's standard library; skip step 1. iPhone HEIC/HEIF photos are converted to JPEG in the browser before upload (`editor.js`, Safari decodes them; the server never sees HEIC). If the browser cannot decode HEIC, the page says so.
    Several photos sent together are first combined into one PDF, a page per photo (`internal/printer/photos.go`, in the worker): JPEGs are embedded as they are (`DCTDecode`), PNGs stored losslessly (`FlateDecode`, with a soft mask for transparency), each page sized as the photo at 300 dpi. From then on the job is an ordinary PDF on every OS, with `Job.Photos` set so the editor offers photo controls.
 3. Printing: Win32 via `golang.org/x/sys/windows` — `OpenPrinter`, `DocumentProperties` to get and modify the printer's `DEVMODE` (`dmDuplex`, `dmColor`, `dmPaperSize`, `dmCopies`), `CreateDC`, `StartDoc`/`StartPage`, `StretchDIBits`, `EndPage`/`EndDoc`.
 4. Pages are rendered at the printer's DPI (300 by default) and scaled to the printable area.

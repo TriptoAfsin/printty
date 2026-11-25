@@ -215,7 +215,7 @@ func (s *Server) secureHeaders(h http.Handler) http.Handler {
 		hd.Set("X-Content-Type-Options", "nosniff")
 		hd.Set("Referrer-Policy", "same-origin")
 		hd.Set("X-Frame-Options", "DENY")
-		hd.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; form-action 'self'")
+		hd.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; form-action 'self'")
 		h.ServeHTTP(w, r)
 	})
 }

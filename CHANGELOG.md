@@ -2,6 +2,11 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [0.5.0] - 2026-11-25
+
+### Added
+- **iPhone photos (HEIC/HEIF).** Pick .heic or .heif photos, including from the Files app: the browser turns them into JPEGs (upright, up to 16 megapixels) before they upload. Safari on iPhone, iPad and Mac can do this; browsers that can't open HEIC say so instead of failing.
+
 ## [0.4.0] - 2026-11-25
 
 ### Added
