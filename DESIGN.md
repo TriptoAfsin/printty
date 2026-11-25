@@ -46,9 +46,9 @@ Spacing, type scale (1.2), easings and durations come from the scaffold. `base.c
 - No textures, no gradients, no machined parts or faders from the full Ribbon theme: Printty takes its palette, faces, radii and calm only.
 
 ## Screens
-- Phone shell: wordmark top left, printer status chip top right (`Printer ready` in ok-soft, `Printer off` in warn-soft), floating pill tab bar at the bottom (Print, Queue).
+- Phone shell: wordmark top left, printer status chip top right (`Printer ready` in ok-soft, `Printer off` in warn-soft), floating tab bar at the bottom (Print, Queue): an icon over a small label, the current tab on accent-soft in the on-soft colour, so it reads as navigation and never as a choice (choices are the paper-2 tracks).
 - **Sign in**: username, password, Sign in; "or"; Ask as a guest (ghost); invite hint at the foot.
-- **Print**: file card with a page thumbnail; copies stepper and pages; sides ("Two-sided is a manual flip"); colour; paper (A4 preselected); approval note; Send request (or Print for admin/trusted).
+- **Print**: file card with a page thumbnail; copies stepper and pages; sides ("Two-sided is a manual flip"); colour; paper (A4 preselected); approval note. The Send request (or Print) button lives in a **sticky action bar**: a raised card stuck to the bottom of the screen (above the tab bar on phones) that also says what will print ("5 photos on 3 sheets" over "1 copy, A4, one-sided, colour").
 - **Queue** (client): one card per job: name, status tag, one line of detail; progress bar while printing.
 - Admin shell: top bar with wordmark, pill nav (Requests with a count badge, Queue, Users, Settings), mode toggle, avatar.
 - **Requests** (admin, the signature): one card per request: first-page thumbnail, requester + role tag + time, file, guest note in italics, setting tags, Reject (ghost) and Approve (primary).
@@ -59,6 +59,8 @@ Spacing, type scale (1.2), easings and durations come from the scaffold. `base.c
 
 ## Controls
 - Primary: accent fill, `--color-accent-ink` label, pill, 44px (54px full-width on phones); hover `--color-accent-deep`.
+- Choices that can be pictured (orientation, size on paper, sides, binding margin, colour) carry a 24px line icon above the label (`.seg.icons`); the chosen one's icon turns accent. Icons come from the shared sprite in `layout.html` (1.8 stroke, round caps). Numbers and paper names stay text.
+- On/off settings are switches, not checkboxes.
 - Secondary (ghost): transparent with a 1.5px inset `--color-ring`, ink on hover.
 - Inputs: pill, 52px, 1.5px inset ring, raised fill. Switches: 46×28 pill, accent when on, `role="switch"`.
 - Every control: default, hover, focus-visible (2px `--color-focus` ring, offset 2px), active, disabled, loading, error, success. Touch targets ≥ 44px.

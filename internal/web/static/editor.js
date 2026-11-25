@@ -8,6 +8,10 @@
   var upForm = document.querySelector("form[data-upload]");
   if (upForm) {
     var fileIn = upForm.querySelector("input[type=file]");
+    // Choosing a file sends it straight away, so the print button has nothing
+    // to do yet (without this script it submits the file and options at once).
+    var early = upForm.querySelector("button[type=submit]");
+    if (early) early.disabled = true;
     fileIn.addEventListener("change", function () {
       var fs = fileIn.files;
       if (!fs || !fs.length) return;
@@ -113,6 +117,11 @@
   function val(name) {
     var el = form.querySelector('input[name="' + name + '"]:checked');
     return el ? el.value : "";
+  }
+  // The colour choice, or the hidden field on a printer without colour.
+  function colorValue() {
+    var c = form.querySelector('input[name="color"]:checked') || form.querySelector('input[name="color"]');
+    return c ? c.value : "";
   }
   function pageEls() { return strip.querySelectorAll("[data-page]"); }
   function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
@@ -253,6 +262,8 @@
   var center = form.querySelector("[data-center]");
   var photo = !!(repeatIn || album);
   var stripCount = form.querySelector("[data-strip-count]");
+  var abTitle = form.querySelector("[data-ab-title]"), abSub = form.querySelector("[data-ab-sub]");
+  var centerLabel = form.querySelector("[data-center-label]");
   var lastScale = 1, lastSheets = [], lastArea = [1, 1], lastShifts = [], lastOne = false;
   var bindIn = form.querySelector('input[name="bindmm"]');
   var bindOut = form.querySelector("[data-bind-out]"), bindNote = form.querySelector("[data-bind-note]");
@@ -355,7 +366,7 @@
     if (scaleOut) scaleOut.textContent = o.scale + "%";
     if (dragHint) dragHint.textContent = o.oneSheet ? "Drag a photo in the preview to move it on the sheet." :
       album ? "Drag in the preview to move every photo within its space." : "Drag the photo in the preview to move it.";
-    if (center) center.textContent = o.oneSheet ? "Line up" : "Centre";
+    if (centerLabel) centerLabel.textContent = o.oneSheet ? "Line up" : "Centre";
     var pn = plan(o, included), paper = pn.paper, pw = pn.pw, ph = pn.ph, sheets = pn.sheets;
     lastArea = pn.area;
     lastShifts = pn.shifts;
@@ -397,6 +408,13 @@
     var tooMany = o.oneSheet && included.length > 30;
     if (tooMany) countEl.textContent = "Up to 30 fit on one sheet";
     if (submit) submit.disabled = !included.length || tooMany;
+
+    // The sticky action bar repeats what will print, next to the button.
+    if (abTitle) abTitle.textContent = countEl.textContent;
+    if (abSub) {
+      var paperName = val("paper") === "4x6" ? "4×6" : val("paper") === "5x7" ? "5×7" : val("paper");
+      abSub.textContent = [copies === 1 ? "1 copy" : copies + " copies", paperName, twoSided ? "two-sided" : "one-sided", colorValue() === "mono" ? "black and white" : "colour"].join(", ");
+    }
 
     // Strip: show skipped pages, each page's turn and its place in the order.
     var pos = 0;

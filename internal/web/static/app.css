@@ -319,3 +319,32 @@ dialog.layout-pick { width: min(520px, calc(100% - 24px)); max-height: calc(100d
 .sheet .bind-band { position: absolute; top: 0; bottom: 0; background: color-mix(in oklch, var(--color-accent) 12%, transparent); pointer-events: none; }
 .sheet .bind-band.left { left: 0; border-right: 1px dashed var(--color-accent); }
 .sheet .bind-band.right { right: 0; border-left: 1px dashed var(--color-accent); }
+
+/* ---------- icons, tab bar, sticky action bar ---------- */
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+svg.icon { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The tab bar is navigation, not a choice: icon over a small label, the
+   current tab in the accent colour, on a floating raised dock. */
+.tabs { background: color-mix(in oklch, var(--color-raised) 90%, transparent); backdrop-filter: blur(12px); box-shadow: var(--shadow-card), var(--shadow-panel); }
+.tabs a { flex-direction: column; gap: 3px; min-height: 52px; font-size: .75rem; letter-spacing: .01em; transition: color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); }
+.tabs a .icon { width: 22px; height: 22px; }
+.tabs a[aria-current="page"] { background: var(--color-accent-soft); color: var(--color-on-soft); box-shadow: none; }
+.tabs a:not([aria-current="page"]):hover { color: var(--color-ink); }
+.tabs a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* Choices with a picture: icon above the label. */
+.seg.icons label { flex-direction: column; gap: 5px; min-height: 66px; padding: 8px 4px; line-height: 1.2; transition: color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); }
+.seg.icons .icon { width: 24px; height: 24px; }
+.seg.icons label:has(input:checked) .icon { color: var(--color-accent); }
+.btn .icon { width: 18px; height: 18px; }
+
+/* The print button stays in reach: a bar that sticks to the bottom of the
+   screen (above the tab bar on phones) and says what will print. */
+.actionbar { position: sticky; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: var(--z-sticky); display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px; border-radius: var(--radius-card); background: var(--color-raised); box-shadow: var(--shadow-card), var(--shadow-panel); }
+body:has(.tabs) .actionbar { bottom: calc(16px + 62px + 10px + env(safe-area-inset-bottom)); }
+.ab-sum { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ab-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.ab-sum .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.actionbar .btn { flex: none; min-height: 48px; padding: 0 18px; }
+@media (max-width: 380px) { .actionbar .btn { padding: 0 14px; } }

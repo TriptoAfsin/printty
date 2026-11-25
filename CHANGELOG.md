@@ -2,6 +2,13 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [0.6.1] - 2026-11-25
+
+### Changed
+- **The Print button is always in reach.** It sits in a bar that stays at the bottom of the screen while you scroll, with a summary of what will print ("5 photos on 3 sheets", "1 copy, A4, one-sided, colour") that follows your choices. People who need approval see Send request there.
+- **Tabs look like tabs.** Print and Queue at the bottom of the phone screen are now an icon over a label, with the current one tinted, so they no longer look like buttons.
+- **Choices with pictures.** Orientation, size on paper, sides, binding margin and colour show a small drawing of each option; the chosen one is highlighted. "Turn pages to fit the paper" is a switch, and Centre / Line up has an icon.
+
 ## [0.6.0] - 2026-11-25
 
 ### Added
@@ -14,6 +21,8 @@ All notable changes to Printty. Versions follow [Semantic Versioning](https://se
 
 ### Fixed
 - A second finger touching the page strip mid-drag no longer leaves a page stuck in the air.
+
+## [0.5.0] - 2026-11-25
 
 ### Added
 - **iPhone photos (HEIC/HEIF).** Pick .heic or .heif photos, including from the Files app: the browser turns them into JPEGs (upright, up to 16 megapixels) before they upload. Safari on iPhone, iPad and Mac can do this; browsers that can't open HEIC say so instead of failing.

@@ -82,19 +82,19 @@
 
     <fieldset class="field">
       <legend>Orientation</legend>
-      <div class="seg">
-        <label><input type="radio" name="orientation" value="" checked>Auto</label>
-        <label><input type="radio" name="orientation" value="portrait">Portrait</label>
-        <label><input type="radio" name="orientation" value="landscape">Landscape</label>
+      <div class="seg icons">
+        <label><input type="radio" name="orientation" value="" checked><svg class="icon"><use href="#i-auto"/></svg>Auto</label>
+        <label><input type="radio" name="orientation" value="portrait"><svg class="icon"><use href="#i-portrait"/></svg>Portrait</label>
+        <label><input type="radio" name="orientation" value="landscape"><svg class="icon"><use href="#i-landscape"/></svg>Landscape</label>
       </div>
     </fieldset>
 
     <fieldset class="field">
       <legend>Size on paper</legend>
-      <div class="seg">
-        <label><input type="radio" name="fit" value="" checked>Fit</label>
-        <label><input type="radio" name="fit" value="fill">Fill</label>
-        <label><input type="radio" name="fit" value="actual">Actual size</label>
+      <div class="seg icons">
+        <label><input type="radio" name="fit" value="" checked><svg class="icon"><use href="#i-fit"/></svg>Fit</label>
+        <label><input type="radio" name="fit" value="fill"><svg class="icon"><use href="#i-fill"/></svg>Fill</label>
+        <label><input type="radio" name="fit" value="actual"><svg class="icon"><use href="#i-actual"/></svg>Actual size</label>
       </div>
     </fieldset>
 
@@ -132,7 +132,7 @@
     </div>
     <input type="hidden" name="offx" value="0">
     <input type="hidden" name="offy" value="0">
-    <div class="row between photo-hint"><span class="small muted" data-drag-hint>Drag the photo in the preview to move it.</span><button class="btn ghost sm" type="button" data-center>Centre</button></div>
+    <div class="row between photo-hint"><span class="small muted" data-drag-hint>Drag the photo in the preview to move it.</span><button class="btn ghost sm" type="button" data-center><svg class="icon"><use href="#i-centre"/></svg><span data-center-label>Centre</span></button></div>
     {{else}}
     <fieldset class="field">
       <legend>Pages per sheet</legend>
@@ -147,26 +147,26 @@
     {{end}}
 
     <input type="hidden" name="autorotate-shown" value="1">
-    <div class="check-wrap">
-      <label class="check"><input type="checkbox" name="autorotate" checked> Turn pages to fit the paper</label>
-      <span class="small muted">A landscape page fills a portrait sheet instead of printing small. ↻ on a page overrides it.</span>
+    <div class="switchrow">
+      <div><div class="fname">Turn pages to fit the paper</div><div class="small muted">A landscape page fills a portrait sheet instead of printing small. ↻ on a page overrides it.</div></div>
+      <label class="switch"><input type="checkbox" name="autorotate" checked aria-label="Turn pages to fit the paper"><span></span></label>
     </div>
 
     <fieldset class="field">
       <legend>Sides {{if not .Data.Caps.AutoDuplex}}<span class="muted">Two-sided is a manual flip</span>{{end}}</legend>
-      <div class="seg">
-        <label><input type="radio" name="duplex" value="one-sided" checked>One-sided</label>
-        <label><input type="radio" name="duplex" value="two-sided">Two-sided</label>
+      <div class="seg icons">
+        <label><input type="radio" name="duplex" value="one-sided" checked><svg class="icon"><use href="#i-one"/></svg>One-sided</label>
+        <label><input type="radio" name="duplex" value="two-sided"><svg class="icon"><use href="#i-two"/></svg>Two-sided</label>
       </div>
     </fieldset>
 
     {{if .Data.Margins}}
     <fieldset class="field">
       <legend>Binding margin <span class="muted">Room to staple, punch or bind</span></legend>
-      <div class="seg">
-        <label><input type="radio" name="bind" value="" checked>None</label>
-        <label><input type="radio" name="bind" value="left">Left</label>
-        <label><input type="radio" name="bind" value="right">Right</label>
+      <div class="seg icons">
+        <label><input type="radio" name="bind" value="" checked><svg class="icon"><use href="#i-nomargin"/></svg>None</label>
+        <label><input type="radio" name="bind" value="left"><svg class="icon"><use href="#i-margin-left"/></svg>Left</label>
+        <label><input type="radio" name="bind" value="right"><svg class="icon"><use href="#i-margin-right"/></svg>Right</label>
       </div>
     </fieldset>
     <div class="field bind-size" data-bind-size>
@@ -179,9 +179,9 @@
     {{if .Data.Caps.Color}}
     <fieldset class="field">
       <legend>Colour</legend>
-      <div class="seg">
-        <label><input type="radio" name="color" value="color" checked>Colour</label>
-        <label><input type="radio" name="color" value="mono">Black and white</label>
+      <div class="seg icons">
+        <label><input type="radio" name="color" value="color" checked><svg class="icon"><use href="#i-colour"/></svg>Colour</label>
+        <label><input type="radio" name="color" value="mono"><svg class="icon"><use href="#i-mono"/></svg>Black and white</label>
       </div>
     </fieldset>
     {{else}}<input type="hidden" name="color" value="mono">{{end}}
@@ -197,10 +197,14 @@
     {{if not .V.AutoApprove}}
     <label class="field"><span class="label">Note for the owner <span class="muted">Optional</span></span><input class="input" name="note" maxlength="200" placeholder="For class tomorrow"></label>
     <p class="note"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span>The owner approves this and gets a message now, so the printer can be readied.</span></p>
-    <button class="btn primary lg" type="submit" data-busy="Sending…">Send request</button>
-    {{else}}
-    <button class="btn primary lg" type="submit" data-busy="Sending…">Print</button>
     {{end}}
+    <div class="actionbar">
+      <div class="ab-sum">
+        <span class="ab-title" data-ab-title>{{if .Data.Draft}}{{.Data.Draft.FileName}}{{else}}Nothing chosen yet{{end}}</span>
+        <span class="small muted" data-ab-sub>{{if .Data.Draft}}{{if not .V.AutoApprove}}The owner approves it first{{else}}Ready to print{{end}}{{else}}Pick a file above{{end}}</span>
+      </div>
+      {{if not .V.AutoApprove}}<button class="btn primary" type="submit" data-busy="Sending…"><svg class="icon"><use href="#i-send"/></svg>Send request</button>{{else}}<button class="btn primary" type="submit" data-busy="Sending…"><svg class="icon"><use href="#i-print"/></svg>Print</button>{{end}}
+    </div>
   </form>
 </main>
 {{end}}
