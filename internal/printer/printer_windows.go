@@ -486,16 +486,15 @@ func devmodeFor(h windows.Handle, name string, o Options, orient Orientation) ([
 	} else {
 		dm.Color = dmColorMono
 	}
-	dm.Duplex = dmDupSimplex // manual duplex is done by Printty; auto duplex below
+	// The queue sends Simplex for each pass of a manual duplex job, so a
+	// two-sided value here means the owner said the printer has a duplex
+	// unit (Settings), and the driver does the flipping.
+	dm.Duplex = dmDupSimplex
 	switch o.Duplex {
 	case LongEdge:
-		if capsFor(name).AutoDuplex {
-			dm.Duplex = dmDupVert
-		}
+		dm.Duplex = dmDupVert
 	case ShortEdge:
-		if capsFor(name).AutoDuplex {
-			dm.Duplex = dmDupHoriz
-		}
+		dm.Duplex = dmDupHoriz
 	}
 	if id, ok := matchPaper(paperIDs(name), o.Paper); ok {
 		dm.Fields |= dmFieldPaperSize
