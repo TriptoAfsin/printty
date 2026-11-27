@@ -5,6 +5,7 @@ package printer
 import (
 	"context"
 	"errors"
+	"strings"
 )
 
 // Duplex is how pages are placed on the sheet.
@@ -102,6 +103,27 @@ type Choice struct {
 	Value string `json:"value"`
 	Label string `json:"label"`
 }
+
+// Option returns the driver option for one of the settings the print page
+// shows on its own: OptQuality or OptMedia. CUPS printers name them in
+// their PPD (cupsPrintQuality, MediaType...), Windows uses the keys as is.
+func (c Caps) Option(which string) *DriverOption {
+	for i, o := range c.Options {
+		k := strings.ToLower(o.Key)
+		switch {
+		case which == OptQuality && strings.Contains(k, "quality"),
+			which == OptMedia && (k == "media" || k == "mediatype" || k == "media-type"):
+			return &c.Options[i]
+		}
+	}
+	return nil
+}
+
+// Settings the print page shows by themselves (Caps.Option).
+const (
+	OptQuality = "quality"
+	OptMedia   = "media"
+)
 
 // Valid reports whether value is one of the option's choices.
 func (o DriverOption) Valid(value string) bool {

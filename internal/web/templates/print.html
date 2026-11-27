@@ -193,6 +193,28 @@
       </div>
     </fieldset>
 
+    {{with .Data.Caps.Option "quality"}}
+    {{$def := .Default}}{{$key := .Key}}
+    {{if le (len .Choices) 4}}
+    <fieldset class="field">
+      <legend>Quality <span class="muted" data-quality-hint></span></legend>
+      <div class="seg">
+        {{range .Choices}}<label><input type="radio" name="drv_{{$key}}" value="{{.Value}}" {{if eq .Value $def}}checked{{end}}>{{.Label}}</label>{{end}}
+      </div>
+    </fieldset>
+    {{else}}
+    <label class="field"><span class="label">Quality</span>
+      <select class="input" name="drv_{{.Key}}">{{range .Choices}}<option value="{{.Value}}" {{if eq .Value $def}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+    </label>
+    {{end}}
+    {{end}}
+
+    {{with .Data.Caps.Option "media"}}
+    {{$def := .Default}}
+    <label class="field"><span class="label">Paper type <span class="muted">Match what's in the printer</span></span>
+      <select class="input" name="drv_{{.Key}}">{{range .Choices}}<option value="{{.Value}}" {{if eq .Value $def}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+    </label>
+    {{end}}
 
     {{if not .V.AutoApprove}}
     <label class="field"><span class="label">Note for the owner <span class="muted">Optional</span></span><input class="input" name="note" maxlength="200" placeholder="For class tomorrow"></label>

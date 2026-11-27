@@ -2,6 +2,12 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [0.7.0] - 2026-11-27
+
+### Added
+- **Print quality.** The print page has Draft, Standard and High, the same levels as the printer's own settings: Draft is faster and uses less ink, Standard is the balanced default, High is sharpest. High also renders pages at 600 dpi instead of 300, so text and photos come out crisper (it takes longer to send to the printer). The choice shows in the summary bar, the queue and the owner's request alert. Checked on the Canon G1010 driver, which takes each level as its own High / Standard / Draft mode.
+- **Paper type.** Pick the paper in the printer (plain, glossy photo paper, matte, envelope...) from the list the printer's driver offers, so the printer uses the right amount of ink for it. Plain paper stays the default.
+
 ## [0.6.1] - 2026-11-25
 
 ### Changed

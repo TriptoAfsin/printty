@@ -80,7 +80,7 @@
 {{else}}<span class="tag">{{.State}}</span>{{end}}
 {{end}}
 
-{{define "jobmeta"}}{{plural .DocPages "page"}}{{if .Options.Pages}} (pages {{.Options.Pages}}){{end}}, {{if .Options.Color}}colour{{else}}black and white{{end}}, {{.Options.Paper}}{{if eq .Options.Duplex "two-sided"}}, two-sided{{end}}{{if eq .Options.Duplex "two-sided-short"}}, two-sided (short edge){{end}}{{if gt .Options.Copies 1}}, {{.Options.Copies}} copies{{end}}{{end}}
+{{define "jobmeta"}}{{plural .DocPages "page"}}{{if .Options.Pages}} (pages {{.Options.Pages}}){{end}}, {{if .Options.Color}}colour{{else}}black and white{{end}}, {{.Options.Paper}}{{if eq .Options.Duplex "two-sided"}}, two-sided{{end}}{{if eq .Options.Duplex "two-sided-short"}}, two-sided (short edge){{end}}{{with index .Options.Driver "quality"}}{{if or (eq . "high") (eq . "draft")}}, {{.}} quality{{end}}{{end}}{{if gt .Options.Copies 1}}, {{.Options.Copies}} copies{{end}}{{end}}
 
 {{define "icons"}}<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
   <defs>

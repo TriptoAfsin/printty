@@ -94,8 +94,14 @@ const (
 	srcCopy      = 0x00CC0020
 	halftone     = 4
 
-	renderDPI = 300 // cap: higher printer DPIs are reached by GDI scaling
-	bandRows  = 256
+	// Pages are rendered at up to this many dots per inch; a printer with
+	// more gets them scaled up by GDI. High quality renders at 600, which is
+	// sharper text and photos for four times the pixels (worker memory and
+	// spool size), so it is only used when someone picks High.
+	renderDPI      = 300
+	renderDPIHigh  = 600
+	renderDPIDraft = 150
+	bandRows       = 256
 )
 
 // devmodeW mirrors DEVMODEW (220 bytes) for the printer fields we use.
@@ -503,6 +509,17 @@ func devmodeFor(h windows.Handle, name string, o Options, orient Orientation) ([
 	return buf, nil
 }
 
+// renderDPIFor is the render resolution cap for a quality choice.
+func renderDPIFor(quality string) float64 {
+	switch quality {
+	case "high":
+		return renderDPIHigh
+	case "draft":
+		return renderDPIDraft
+	}
+	return renderDPI
+}
+
 func getCaps(hdc uintptr, idx int) int {
 	r, _, _ := procGetDeviceCaps.Call(hdc, uintptr(idx))
 	return int(int32(r))
@@ -590,10 +607,7 @@ func (w *Windows) printLocked(ctx context.Context, job Job) error {
 		opts.BindEdge = float64(max(0, min(offX, physW-horz-offX))) / float64(dpiX)
 	}
 	sheets := Layout(pages, func(p int) (float64, float64) { return src.size(p - 1) }, areaW, areaH, opts)
-	maxDPI := float64(renderDPI)
-	if job.Options.Driver["quality"] == "draft" {
-		maxDPI = 150
-	}
+	maxDPI := renderDPIFor(job.Options.Driver[OptQuality])
 	copies := job.Options.Copies
 	if copies < 1 {
 		copies = 1

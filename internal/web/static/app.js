@@ -58,6 +58,18 @@
     });
   });
 
+  // Print quality: say what the chosen level trades off.
+  var qualityHints = { draft: "Faster, uses less ink", standard: "Balanced speed and quality", high: "Sharpest, slower, more ink" };
+  document.querySelectorAll("[data-quality-hint]").forEach(function (out) {
+    var set = out.closest("fieldset");
+    function show() {
+      var c = set.querySelector("input:checked");
+      out.textContent = (c && qualityHints[c.value]) || "";
+    }
+    set.addEventListener("change", show);
+    show();
+  });
+
   // Show the chosen file's name.
   document.querySelectorAll("input[type=file][data-name]").forEach(function (input) {
     input.addEventListener("change", function () {

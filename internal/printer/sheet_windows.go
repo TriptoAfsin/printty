@@ -41,7 +41,9 @@ const (
 )
 
 // Quality choices map to the standard DEVMODE print qualities, which drivers
-// translate to their own modes. Draft also renders at a lower resolution.
+// translate to their own modes (the Canon G1010 driver keeps High and turns
+// Draft into its low-quality, 300 dpi mode). Pages are also rendered at a
+// resolution to match: see renderDPIFor.
 var qualityValues = map[string]int16{"draft": -1, "standard": -3, "high": -4}
 
 // defaultDevmode reads the printer's default settings.
@@ -75,7 +77,7 @@ func driverOptions(name string) []DriverOption {
 		names := make([]uint16, int(n)*64)
 		deviceCaps(name, dcMediaTypes, unsafe.Pointer(&ids[0]))
 		deviceCaps(name, dcMediaTypeNames, unsafe.Pointer(&names[0]))
-		o := DriverOption{Key: "media", Label: "Paper type"}
+		o := DriverOption{Key: OptMedia, Label: "Paper type"}
 		for i := 0; i < int(n); i++ {
 			label := windows.UTF16ToString(names[i*64 : (i+1)*64])
 			if label == "" {
@@ -118,8 +120,8 @@ func driverOptions(name string) []DriverOption {
 		}
 	}
 
-	opts = append(opts, DriverOption{Key: "quality", Label: "Print quality", Default: "standard", Choices: []Choice{
-		{Value: "draft", Label: "Draft (faster, less ink)"},
+	opts = append(opts, DriverOption{Key: OptQuality, Label: "Print quality", Default: "standard", Choices: []Choice{
+		{Value: "draft", Label: "Draft"},
 		{Value: "standard", Label: "Standard"},
 		{Value: "high", Label: "High"},
 	}})

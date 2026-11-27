@@ -498,6 +498,9 @@ func describe(j store.Job) string {
 		parts = append(parts, "black and white")
 	}
 	parts = append(parts, o.Paper)
+	if q := o.Driver[printer.OptQuality]; q == "high" || q == "draft" {
+		parts = append(parts, q+" quality")
+	}
 	if o.Duplex != printer.Simplex && o.Duplex != "" {
 		parts = append(parts, "two-sided")
 	}

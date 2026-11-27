@@ -413,7 +413,10 @@
     if (abTitle) abTitle.textContent = countEl.textContent;
     if (abSub) {
       var paperName = val("paper") === "4x6" ? "4×6" : val("paper") === "5x7" ? "5×7" : val("paper");
-      abSub.textContent = [copies === 1 ? "1 copy" : copies + " copies", paperName, twoSided ? "two-sided" : "one-sided", colorValue() === "mono" ? "black and white" : "colour"].join(", ");
+      var bits = [copies === 1 ? "1 copy" : copies + " copies", paperName, twoSided ? "two-sided" : "one-sided", colorValue() === "mono" ? "black and white" : "colour"];
+      var q = val("drv_quality");
+      if (q === "high" || q === "draft") bits.push(q + " quality");
+      abSub.textContent = bits.join(", ");
     }
 
     // Strip: show skipped pages, each page's turn and its place in the order.

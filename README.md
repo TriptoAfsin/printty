@@ -24,7 +24,7 @@ Sharing a USB or home printer with phones is still awkward: enterprise tools (Pa
 - **Print editor:** page previews and a live sheet preview; leave pages out or turn them; landscape pages turn to fill portrait paper by themselves.
 - **Photo layout:** image size, 1 to 8 copies on one sheet arranged automatically, and drag to reposition.
 - **Several photos at once:** pick (or share) up to 30 photos and they become one document, a page each. Drag the pages into any order, then print 1, 2, 3, 4, 6 or 9 per sheet, or all of them on one sheet in the grid that shows them biggest, and drag each photo to move it on that sheet.
-- **Print options:** copies, one/two-sided, colour or black and white, paper size (A4 default), orientation, fit / fill / actual size, 1 to 9 pages per sheet, any page order. The layout engine (`internal/printer/layout.go`) is shared by every OS.
+- **Print options:** copies, one/two-sided, colour or black and white, paper size (A4 default), orientation, fit / fill / actual size, 1 to 9 pages per sheet, any page order, print quality (draft / standard / high) and paper type from the printer's driver. The layout engine (`internal/printer/layout.go`) is shared by every OS.
 - **Accounts:** change your own password; the owner makes one-time reset links.
 - **Editable Telegram messages** with emoji and placeholders.
 - **Manual duplex** for printers without a duplex unit (like the G1010): fronts print, Printty asks you to flip the stack, backs print.
