@@ -144,14 +144,17 @@ PRINTTY_PRINT_TEST=1 go test ./internal/printer/   # real GDI print to "Microsof
 
 | Phase | Deliverable | Status |
 | --- | --- | --- |
-| 0 | Native Windows PDF printing | Done: `Windows.Data.Pdf` + GDI, tested to PDF |
+| 0 | Native Windows PDF printing | Done: `Windows.Data.Pdf` + GDI |
 | 1 | Server, embedded UI, admin setup, upload and print with options | Done |
 | 2 | Users, invites, guests, approval queue | Done |
-| 3 | Saved queue, status monitor, hold-and-retry, manual duplex, history | Done (needs a real G1010 power-off test) |
-| 3a | Telegram alerts with Approve/Reject, limits, cleanup | Done; mDNS name and QR code to do |
-| 3b | PWA: manifest, service worker, share target | Done; HTTPS setup to document per platform |
-| 4 | Run as a Windows service or at sign-in, tray icon, installer and release builds | Done (tested: install from the UI, PDF engine inside the service, tray start/stop, removal). CUPS on real hardware to do |
-| Later | Web push, direct IPP, "PC is off" relay, Office files, passkeys | |
+| 3 | Saved queue, status monitor, hold-and-retry, manual duplex, history | Done, on the Canon G1010 |
+| 3a | Telegram alerts with Approve/Reject, limits, cleanup | Done |
+| 3b | PWA: manifest, service worker, share target | Done |
+| 4 | Windows service or start at sign-in, tray icon, installer, release builds (Windows, Linux, macOS) | Done |
+| 5 | Print editor: page previews, page order, pages per sheet, photo layouts, binding margin, quality and paper type, HEIC photos (0.3 to 0.7) | Done |
+| 6 | [Printer compatibility guide](docs/COMPATIBILITY.md) | Done |
+| Next | QR code for the phone link, "printer is back" alert, a `printty.local` name (mDNS), Linux and macOS on real printers, Microsoft Store version, HTTPS setup guide per platform | Planned |
+| Later | Web push, direct IPP, "PC is off" relay, Office files, passkeys, borderless photos | Ideas |
 
 ## License
 
