@@ -121,12 +121,15 @@ func driverOptions(name string) []DriverOption {
 	}
 
 	opts = append(opts, DriverOption{Key: OptQuality, Label: "Print quality", Default: "standard", Choices: []Choice{
-		{Value: "draft", Label: "Draft"},
-		{Value: "standard", Label: "Standard"},
-		{Value: "high", Label: "High"},
+		{Value: "draft", Label: "Draft", Note: dpiNote("draft")},
+		{Value: "standard", Label: "Standard", Note: dpiNote("standard")},
+		{Value: "high", Label: "High", Note: dpiNote("high")},
 	}})
 	return opts
 }
+
+// dpiNote says the resolution Printty renders pages at for a quality.
+func dpiNote(quality string) string { return fmt.Sprintf("%.0f dpi", renderDPIFor(quality)) }
 
 // applyLayoutAndDriver merges sheet orientation and driver options into dm.
 func applyLayoutAndDriver(dm *devmodeW, orient Orientation, o Options) {

@@ -415,7 +415,10 @@
       var paperName = val("paper") === "4x6" ? "4×6" : val("paper") === "5x7" ? "5×7" : val("paper");
       var bits = [copies === 1 ? "1 copy" : copies + " copies", paperName, twoSided ? "two-sided" : "one-sided", colorValue() === "mono" ? "black and white" : "colour"];
       var q = val("drv_quality");
-      if (q === "high" || q === "draft") bits.push(q + " quality");
+      if (q === "high" || q === "draft") {
+        var qn = form.querySelector('input[name="drv_quality"]:checked + .seg-note, input[name="drv_quality"]:checked ~ .seg-note');
+        bits.push(q + " quality" + (qn ? " (" + qn.textContent + ")" : ""));
+      }
       abSub.textContent = bits.join(", ");
     }
 

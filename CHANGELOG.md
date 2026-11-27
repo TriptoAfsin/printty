@@ -2,6 +2,11 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [0.7.1] - 2026-11-27
+
+### Changed
+- **Quality shows its resolution.** Each quality button says what it prints at: Draft 150 dpi, Standard 300 dpi, High 600 dpi. The summary next to the Print button includes it too ("high quality (600 dpi)").
+
 ## [0.7.0] - 2026-11-27
 
 ### Added

@@ -1,6 +1,6 @@
 // Printty service worker: caches the app shell so the installed app opens
 // instantly and says plainly when the computer running Printty is off.
-const CACHE = "printty-v5";
+const CACHE = "printty-v6";
 const SHELL = ["/static/tokens.css", "/static/base.css", "/static/app.css", "/static/app.js", "/static/editor.js", "/static/theme.js",
   "/static/icon.svg", "/static/icon-192.png", "/static/fonts/figtree.woff2", "/static/fonts/instrument-sans.woff2", "/static/offline.html"];
 

@@ -335,6 +335,8 @@ svg.icon { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: 
 
 /* Choices with a picture: icon above the label. */
 .seg.icons label { flex-direction: column; gap: 5px; min-height: 66px; padding: 8px 4px; line-height: 1.2; transition: color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); }
+.seg label:has(.seg-note) { flex-direction: column; gap: 2px; min-height: 56px; line-height: 1.2; }
+.seg-note { font-size: .75rem; font-weight: 400; color: var(--color-muted); font-variant-numeric: tabular-nums; }
 .seg.icons .icon { width: 24px; height: 24px; }
 .seg.icons label:has(input:checked) .icon { color: var(--color-accent); }
 .btn .icon { width: 18px; height: 18px; }

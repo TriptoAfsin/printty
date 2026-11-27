@@ -199,12 +199,12 @@
     <fieldset class="field">
       <legend>Quality <span class="muted" data-quality-hint></span></legend>
       <div class="seg">
-        {{range .Choices}}<label><input type="radio" name="drv_{{$key}}" value="{{.Value}}" {{if eq .Value $def}}checked{{end}}>{{.Label}}</label>{{end}}
+        {{range .Choices}}<label><input type="radio" name="drv_{{$key}}" value="{{.Value}}" {{if eq .Value $def}}checked{{end}}>{{.Label}}{{with .Note}}<span class="seg-note">{{.}}</span>{{end}}</label>{{end}}
       </div>
     </fieldset>
     {{else}}
     <label class="field"><span class="label">Quality</span>
-      <select class="input" name="drv_{{.Key}}">{{range .Choices}}<option value="{{.Value}}" {{if eq .Value $def}}selected{{end}}>{{.Label}}</option>{{end}}</select>
+      <select class="input" name="drv_{{.Key}}">{{range .Choices}}<option value="{{.Value}}" {{if eq .Value $def}}selected{{end}}>{{.Label}}{{with .Note}} ({{.}}){{end}}</option>{{end}}</select>
     </label>
     {{end}}
     {{end}}

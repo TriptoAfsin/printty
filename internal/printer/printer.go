@@ -102,6 +102,7 @@ type DriverOption struct {
 type Choice struct {
 	Value string `json:"value"`
 	Label string `json:"label"`
+	Note  string `json:"note,omitempty"` // shown small under the label, e.g. "600 dpi"
 }
 
 // Option returns the driver option for one of the settings the print page
