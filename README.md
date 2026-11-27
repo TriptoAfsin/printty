@@ -4,6 +4,8 @@
 
 <h1 align="center">Printty</h1>
 
+<p align="center"><b>Make your printer wireless.</b><br>Every phone on your Wi-Fi can print to it. You approve every job.</p>
+
 A lean print server you leave running on one computer. Phones and laptops on the same network open a web page, upload a file, choose how it prints, and send it. Nothing prints until the owner approves it, every incoming request pings the owner on Telegram so the printer can be readied, and if the printer is off the job waits and prints by itself once it's back.
 
 > Status: **works end to end on Windows 11** with a Canon G1010 (USB). Linux/macOS (CUPS) builds and is untested on hardware. For other printers, see the [compatibility guide](docs/COMPATIBILITY.md). See [Roadmap](#roadmap).
