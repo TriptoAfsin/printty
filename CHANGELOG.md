@@ -2,6 +2,14 @@
 
 All notable changes to Printty. Versions follow [Semantic Versioning](https://semver.org/); the release workflow takes each release's notes from its section here.
 
+## [Unreleased]
+
+### Added
+- **Printer compatibility list** ([docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)): which printers should work, how sure we are, and what depends on the driver. A "Printer report" issue template for adding printers to it.
+
+### Fixed
+- On Windows, **Automatic two-sided** (Settings) printed two-sided jobs one-sided: the driver was always told one-sided. Printers with a duplex unit now print both sides.
+
 ## [0.7.1] - 2026-11-27
 
 ### Changed
