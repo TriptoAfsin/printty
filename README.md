@@ -6,7 +6,7 @@
 
 A lean print server you leave running on one computer. Phones and laptops on the same network open a web page, upload a file, choose how it prints, and send it. Nothing prints until the owner approves it, every incoming request pings the owner on Telegram so the printer can be readied, and if the printer is off the job waits and prints by itself once it's back.
 
-> Status: **works end to end on Windows 11** with a Canon G1010 (USB). Linux/macOS (CUPS) builds and is untested on hardware. Which other printers should work, and how sure we are: [printer compatibility](docs/COMPATIBILITY.md). See [Roadmap](#roadmap).
+> Status: **works end to end on Windows 11** with a Canon G1010 (USB). Linux/macOS (CUPS) builds and is untested on hardware. For other printers, see the [compatibility guide](docs/COMPATIBILITY.md). See [Roadmap](#roadmap).
 
 ## Why
 
@@ -35,7 +35,7 @@ Sharing a USB or home printer with phones is still awkward: enterprise tools (Pa
 
 ## Printers
 
-Tested on a **Canon PIXMA G1010** (USB, Windows 11). Printty prints through the standard Windows print interface, so any printer with a working Windows driver should print; Linux and macOS go through CUPS. The full list, with a confidence level for each kind of printer and what depends on the driver: **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)**. Tried another printer? [Tell us how it went](https://github.com/TriptoAfsin/printty/issues/new?template=printer-report.md).
+Tested on a **Canon PIXMA G1010** (USB, Windows 11). Printty prints through the standard Windows print interface, so any printer with a working Windows driver should print; Linux and macOS go through CUPS. For which printers work and how sure we are, see the **[compatibility guide](docs/COMPATIBILITY.md)**. Tried another printer? [Tell us how it went](https://github.com/TriptoAfsin/printty/issues/new?template=printer-report.md).
 
 ## Install
 
@@ -124,7 +124,7 @@ phone browser ──► web server + auth ──► job queue ──► printty 
                                        notifier ──► Telegram
 ```
 
-Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Printers: [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md). UI system: [DESIGN.md](DESIGN.md).
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Printers: see the [compatibility guide](docs/COMPATIBILITY.md). UI system: [DESIGN.md](DESIGN.md).
 
 ## Development
 

@@ -22,6 +22,8 @@ Printty is one Go binary with six parts: web server, users and auth, job queue, 
 
 **Canon G1010 series** on Windows 11, USB (`USB001`), Canon driver. Colour inkjet, paper up to A4/Legal (A4 is Printty's default), photo sizes (4x6, 5x7, L, 2L). **No automatic duplex unit**: the driver's "Duplex" is Canon's manual mode, so Printty runs manual duplex itself (below). USB means Windows usually reports "Idle" even when the printer is off, so the stuck-job signal is the main offline detector.
 
+For other printers, see the [compatibility guide](COMPATIBILITY.md).
+
 ## Users, roles and approval
 
 | Role | How they get in | Printing |
