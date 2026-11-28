@@ -5,6 +5,7 @@ import "@fontsource-variable/figtree";
 import "@fontsource-variable/jetbrains-mono";
 import "./styles/tokens.css";
 import "./styles/site.css";
+import "./styles/switcher.css";
 import App from "./App";
 
 hydrateRoot(
