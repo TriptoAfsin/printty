@@ -1,0 +1,99 @@
+/* Printty landing tokens, from DESIGN.md and internal/web/static/tokens.css on main (theme: Ribbon).
+ * Light = Ribbon dawn; dark = blue-black, same teal hue 190. Follows the OS setting.
+ * Names match the house landing pattern; the values are Printty's.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* colour: light (dawn) */
+  --color-paper: oklch(98.2% 0.008 82);
+  --color-card: oklch(99.7% 0.004 85);       /* --color-raised */
+  --color-elevated: oklch(95.8% 0.011 82);   /* --color-paper-2 */
+  --color-elevated-2: oklch(92.3% 0.014 82); /* --color-paper-3 */
+  --color-rule: oklch(89.5% 0.011 82);
+  --color-rule-strong: oklch(80% 0.012 82);  /* --color-ring */
+  --color-ink: oklch(18% 0.006 80);
+  --color-ink-2: oklch(30% 0.008 80);
+  --color-muted: oklch(47% 0.012 80);
+  --color-subtle: oklch(47% 0.012 80);
+  --color-accent: oklch(44% 0.075 190);
+  --color-accent-deep: oklch(38% 0.07 190);
+  --color-accent-soft: oklch(92% 0.028 190);
+  --color-accent-ink: oklch(98% 0.006 85);
+  --color-on-soft: oklch(34% 0.06 190);
+  --color-focus: oklch(52% 0.09 190);
+  --color-scrim: oklch(98.2% 0.008 82 / 0.78);
+  --shadow-card: 0 1px 0 oklch(20% 0.01 80 / 0.05), 0 14px 32px -14px oklch(20% 0.02 80 / 0.2);
+  --body-weight: 400;
+
+  /* type */
+  --font-display: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --head-weight: 500;
+  --tracking-display: -0.035em;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+  --text-3xl: clamp(2.25rem, 1.4rem + 3.4vw, 3.75rem);
+  --text-hero: clamp(2.75rem, 1.2rem + 5.6vw, 5.5rem);
+
+  /* space: 4pt */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+
+  --gutter: max(20px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(20px, env(safe-area-inset-right, 0px));
+  --max: 1200px;
+
+  /* radii: softly rounded, never square, never bubbly */
+  --radius-sm: 7px;   /* --radius-control-in */
+  --radius-md: 10px;  /* --radius-control, --radius-inner */
+  --radius-lg: 14px;  /* --radius-card */
+  --radius-pill: 999px;
+
+  /* motion: calm */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-press: 120ms;
+  --dur-fast: 120ms;  /* --dur-micro */
+  --dur-base: 220ms;  /* --dur-short */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: oklch(15% 0.016 230);
+    --color-card: oklch(25% 0.022 230);
+    --color-elevated: oklch(18.5% 0.018 230);
+    --color-elevated-2: oklch(22% 0.02 230);
+    --color-rule: oklch(28% 0.018 230);
+    --color-rule-strong: oklch(40% 0.022 230);
+    --color-ink: oklch(94% 0.01 85);
+    --color-ink-2: oklch(84% 0.012 85);
+    --color-muted: oklch(72% 0.02 230);
+    --color-subtle: oklch(72% 0.02 230);
+    --color-accent: oklch(74% 0.085 190);
+    --color-accent-deep: oklch(68% 0.08 190);
+    --color-accent-soft: oklch(30% 0.04 195);
+    --color-accent-ink: oklch(17% 0.025 210);
+    --color-on-soft: oklch(86% 0.06 190);
+    --color-focus: oklch(78% 0.09 190);
+    --color-scrim: oklch(15% 0.016 230 / 0.78);
+    --shadow-card: inset 0 0 0 1px var(--color-rule);
+    --body-weight: 350;
+  }
+}
